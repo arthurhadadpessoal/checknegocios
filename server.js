@@ -178,8 +178,8 @@ app.post('/render', async (req, res) => {
     const screenshot = await page.screenshot({ type: 'png', fullPage: false });
     await browser.close();
 
-    res.set('Content-Type', 'image/png');
-    res.send(screenshot);
+    const base64 = screenshot.toString('base64');
+    res.json({ image: 'data:image/png;base64,' + base64 });
 
   } catch (err) {
     console.error('Erro ao renderizar:', err);
