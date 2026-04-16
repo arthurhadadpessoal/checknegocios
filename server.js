@@ -95,7 +95,8 @@ app.post('/render', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({ width: 940, height: 1200 });
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const base64Html = Buffer.from(html, 'utf-8').toString('base64');
+    await page.goto(`data:text/html;base64,${base64Html}`, { waitUntil: 'networkidle0' });
 
     // Aguarda fonte carregar
     await new Promise(r => setTimeout(r, 800));
