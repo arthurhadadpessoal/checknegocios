@@ -6,6 +6,23 @@ const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
+// ─── Pré-carrega CSS do Google Fonts com UA moderno ───────────────────────────
+// Isso garante que todos os glyphs portugueses (ã, ê, ç, ó, etc.) sejam incluídos
+const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=Barlow:wght@400;700&display=swap';
+const MODERN_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+let fontCss = ''; // preenchido no startup
+
+async function preloadFonts() {
+  try {
+    const res = await fetch(FONTS_URL, { headers: { 'User-Agent': MODERN_UA } });
+    fontCss = await res.text();
+    console.log(`Fontes pré-carregadas (${fontCss.length} chars)`);
+  } catch (e) {
+    console.warn('Falha ao pré-carregar fontes:', e.message);
+  }
+}
+
 // ─── Template HTML do banner ──────────────────────────────────────────────────
 function buildHtml(data) {
   const { titulo_linha1, titulo_linha2, mostrar_selo, campos } = data;
@@ -26,7 +43,7 @@ function buildHtml(data) {
 <head>
 <meta charset="UTF-8">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=Barlow:wght@400;700&display=swap');
+${fontCss}
 * { margin:0; padding:0; box-sizing:border-box; }
 body { width:940px; height:1200px; overflow:hidden; background:#e5e3de; }
 .card { width:940px; height:1200px; background:#e5e3de; position:relative; overflow:hidden; }
@@ -80,7 +97,6 @@ app.post('/render', async (req, res) => {
   try {
     const data = req.body;
 
-    // Validação básica
     if (!data.titulo_linha1 || !data.titulo_linha2 || !Array.isArray(data.campos)) {
       return res.status(400).json({ error: 'Payload inválido. Necessário: titulo_linha1, titulo_linha2, campos[]' });
     }
@@ -95,11 +111,7 @@ app.post('/render', async (req, res) => {
 
     const page = await browser.newPage();
     await page.setViewport({ width: 940, height: 1200 });
-    const base64Html = Buffer.from(html, 'utf-8').toString('base64');
-    await page.goto(`data:text/html;base64,${base64Html}`, { waitUntil: 'networkidle0' });
-
-    // Aguarda fonte carregar
-    await new Promise(r => setTimeout(r, 800));
+    await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const screenshot = await page.screenshot({ type: 'png', fullPage: false });
     await browser.close();
@@ -117,4 +129,7 @@ app.post('/render', async (req, res) => {
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Banner renderer rodando na porta ${PORT}`));
+
+preloadFonts().then(() => {
+  app.listen(PORT, () => console.log(`Banner renderer rodando na porta ${PORT}`));
+});
