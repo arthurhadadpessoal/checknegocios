@@ -1,27 +1,52 @@
 const express = require('express');
 const puppeteer = require('puppeteer-core');
+const fs = require('fs');
 
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
 
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-// ─── Pré-carrega CSS do Google Fonts com UA moderno ───────────────────────────
-// Isso garante que todos os glyphs portugueses (ã, ê, ç, ó, etc.) sejam incluídos
-const FONTS_URL = 'https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@900&family=Barlow:wght@400;700&display=swap';
-const MODERN_UA = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-
-let fontCss = ''; // preenchido no startup
-
-async function preloadFonts() {
+// ─── Fontes embutidas via @fontsource (sem dependência de rede) ───────────────
+function loadFont(pkgPath) {
   try {
-    const res = await fetch(FONTS_URL, { headers: { 'User-Agent': MODERN_UA } });
-    fontCss = await res.text();
-    console.log(`Fontes pré-carregadas (${fontCss.length} chars)`);
-  } catch (e) {
-    console.warn('Falha ao pré-carregar fontes:', e.message);
+    return fs.readFileSync(require.resolve(pkgPath)).toString('base64');
+  } catch {
+    return null;
   }
 }
+
+function fontFace(family, weight, b64latin, b64ext) {
+  const faces = [];
+  if (b64ext) faces.push(`@font-face {
+    font-family: '${family}'; font-style: normal; font-weight: ${weight}; font-display: block;
+    src: url('data:font/woff2;base64,${b64ext}') format('woff2');
+    unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }`);
+  if (b64latin) faces.push(`@font-face {
+    font-family: '${family}'; font-style: normal; font-weight: ${weight}; font-display: block;
+    src: url('data:font/woff2;base64,${b64latin}') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }`);
+  return faces.join('\n');
+}
+
+const FONT_CSS = [
+  fontFace('Barlow Condensed', 900,
+    loadFont('@fontsource/barlow-condensed/files/barlow-condensed-latin-900-normal.woff2'),
+    loadFont('@fontsource/barlow-condensed/files/barlow-condensed-latin-ext-900-normal.woff2'),
+  ),
+  fontFace('Barlow', 400,
+    loadFont('@fontsource/barlow/files/barlow-latin-400-normal.woff2'),
+    loadFont('@fontsource/barlow/files/barlow-latin-ext-400-normal.woff2'),
+  ),
+  fontFace('Barlow', 700,
+    loadFont('@fontsource/barlow/files/barlow-latin-700-normal.woff2'),
+    loadFont('@fontsource/barlow/files/barlow-latin-ext-700-normal.woff2'),
+  ),
+].join('\n');
+
+console.log(`Fontes carregadas: ${FONT_CSS.length} chars de CSS`);
 
 // ─── Template HTML do banner ──────────────────────────────────────────────────
 function buildHtml(data) {
@@ -43,7 +68,7 @@ function buildHtml(data) {
 <head>
 <meta charset="UTF-8">
 <style>
-${fontCss}
+${FONT_CSS}
 * { margin:0; padding:0; box-sizing:border-box; }
 body { width:940px; height:1200px; overflow:hidden; background:#e5e3de; }
 .card { width:940px; height:1200px; background:#e5e3de; position:relative; overflow:hidden; }
@@ -82,7 +107,7 @@ ${extraStyle}
       <circle cx="79" cy="79" r="60" stroke="#1a3a8c" stroke-width="2" opacity="0.5"/>
       <rect x="14" y="62" width="130" height="34" rx="6" fill="#1a3a8c" opacity="0.15"/>
       <rect x="14" y="62" width="130" height="34" rx="6" fill="none" stroke="#1a3a8c" stroke-width="2" opacity="0.6"/>
-      <text x="79" y="85" font-family="Arial" font-weight="bold" font-size="13" fill="#1a3a8c" text-anchor="middle" opacity="0.85" letter-spacing="2">NOVO CONVÊNIO</text>
+      <text x="79" y="85" font-family="Arial" font-weight="bold" font-size="13" fill="#1a3a8c" text-anchor="middle" opacity="0.85" letter-spacing="2">NOVO CONV&#xCA;NIO</text>
     </svg>
   </div>
   <div class="fields">${camposHtml}</div>
@@ -129,7 +154,4 @@ app.post('/render', async (req, res) => {
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3000;
-
-preloadFonts().then(() => {
-  app.listen(PORT, () => console.log(`Banner renderer rodando na porta ${PORT}`));
-});
+app.listen(PORT, () => console.log(`Banner renderer rodando na porta ${PORT}`));
