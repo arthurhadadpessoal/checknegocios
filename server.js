@@ -71,6 +71,7 @@ const FONT_CSS = `
 // ─── Template HTML do banner ──────────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '2mb' }));
+app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '2mb' }));
 
 function buildHtml(data) {
   const { titulo_linha1, titulo_linha2, mostrar_selo, campos } = data;
@@ -143,7 +144,20 @@ ${extraStyle}
 // ─── Rota principal ───────────────────────────────────────────────────────────
 app.post('/render', async (req, res) => {
   try {
-    const data = req.body;
+    let data = req.body;
+
+    // Se recebeu como string (Content-Type errado ou raw text), faz parse manual
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch (e) {
+        return res.status(400).json({ error: `JSON inválido: ${e.message}` });
+      }
+    }
+
+    if (!data || typeof data !== 'object') {
+      return res.status(400).json({ error: 'Payload vazio' });
+    }
 
     if (!data.titulo_linha1 || !data.titulo_linha2 || !Array.isArray(data.campos)) {
       return res.status(400).json({ error: 'Payload inválido. Necessário: titulo_linha1, titulo_linha2, campos[]' });
