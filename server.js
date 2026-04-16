@@ -1,54 +1,77 @@
 const express = require('express');
 const puppeteer = require('puppeteer-core');
+const http = require('http');
 const fs = require('fs');
 
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
+const FONT_PORT = 8765;
 
+// ─── Servidor local de fontes (evita data URL — incompatível com Chromium antigo) ─
+const FONT_FILES = {
+  'bc-900.woff2':     '@fontsource/barlow-condensed/files/barlow-condensed-latin-900-normal.woff2',
+  'bc-900x.woff2':    '@fontsource/barlow-condensed/files/barlow-condensed-latin-ext-900-normal.woff2',
+  'b-400.woff2':      '@fontsource/barlow/files/barlow-latin-400-normal.woff2',
+  'b-400x.woff2':     '@fontsource/barlow/files/barlow-latin-ext-400-normal.woff2',
+  'b-700.woff2':      '@fontsource/barlow/files/barlow-latin-700-normal.woff2',
+  'b-700x.woff2':     '@fontsource/barlow/files/barlow-latin-ext-700-normal.woff2',
+};
+
+const fontServer = http.createServer((req, res) => {
+  const key = req.url.slice(1);
+  const pkg = FONT_FILES[key];
+  if (!pkg) { res.writeHead(404); return res.end(); }
+  try {
+    const buf = fs.readFileSync(require.resolve(pkg));
+    res.setHeader('Content-Type', 'font/woff2');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.end(buf);
+  } catch {
+    res.writeHead(404); res.end();
+  }
+});
+
+fontServer.listen(FONT_PORT, '127.0.0.1', () => {
+  console.log(`Font server rodando em http://127.0.0.1:${FONT_PORT}`);
+});
+
+const BASE = `http://127.0.0.1:${FONT_PORT}`;
+
+const FONT_CSS = `
+@font-face {
+  font-family: 'Barlow Condensed'; font-weight: 900; font-style: normal; font-display: block;
+  src: url('${BASE}/bc-900x.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Barlow Condensed'; font-weight: 900; font-style: normal; font-display: block;
+  src: url('${BASE}/bc-900.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Barlow'; font-weight: 400; font-style: normal; font-display: block;
+  src: url('${BASE}/b-400x.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Barlow'; font-weight: 400; font-style: normal; font-display: block;
+  src: url('${BASE}/b-400.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Barlow'; font-weight: 700; font-style: normal; font-display: block;
+  src: url('${BASE}/b-700x.woff2') format('woff2');
+  unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Barlow'; font-weight: 700; font-style: normal; font-display: block;
+  src: url('${BASE}/b-700.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}`;
+
+// ─── Template HTML do banner ──────────────────────────────────────────────────
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
-// ─── Fontes embutidas via @fontsource (sem dependência de rede) ───────────────
-function loadFont(pkgPath) {
-  try {
-    return fs.readFileSync(require.resolve(pkgPath)).toString('base64');
-  } catch {
-    return null;
-  }
-}
-
-function fontFace(family, weight, b64latin, b64ext) {
-  const faces = [];
-  if (b64ext) faces.push(`@font-face {
-    font-family: '${family}'; font-style: normal; font-weight: ${weight}; font-display: block;
-    src: url('data:font/woff2;base64,${b64ext}') format('woff2');
-    unicode-range: U+0100-024F, U+0259, U+1E00-1EFF, U+2020, U+20A0-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-  }`);
-  if (b64latin) faces.push(`@font-face {
-    font-family: '${family}'; font-style: normal; font-weight: ${weight}; font-display: block;
-    src: url('data:font/woff2;base64,${b64latin}') format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-  }`);
-  return faces.join('\n');
-}
-
-const FONT_CSS = [
-  fontFace('Barlow Condensed', 900,
-    loadFont('@fontsource/barlow-condensed/files/barlow-condensed-latin-900-normal.woff2'),
-    loadFont('@fontsource/barlow-condensed/files/barlow-condensed-latin-ext-900-normal.woff2'),
-  ),
-  fontFace('Barlow', 400,
-    loadFont('@fontsource/barlow/files/barlow-latin-400-normal.woff2'),
-    loadFont('@fontsource/barlow/files/barlow-latin-ext-400-normal.woff2'),
-  ),
-  fontFace('Barlow', 700,
-    loadFont('@fontsource/barlow/files/barlow-latin-700-normal.woff2'),
-    loadFont('@fontsource/barlow/files/barlow-latin-ext-700-normal.woff2'),
-  ),
-].join('\n');
-
-console.log(`Fontes carregadas: ${FONT_CSS.length} chars de CSS`);
-
-// ─── Template HTML do banner ──────────────────────────────────────────────────
 function buildHtml(data) {
   const { titulo_linha1, titulo_linha2, mostrar_selo, campos } = data;
 
