@@ -83,9 +83,8 @@ function buildHtml(data) {
     </div>
   `).join('');
 
-  const extraStyle = campos.length >= 4
-    ? `.fields { top: 440px !important; } .title { font-size: 96px !important; }`
-    : '';
+  const titleSize = (titulo_linha1.length > 14 || titulo_linha2.length > 14) ? '72px' : '88px';
+  const fieldsTop = campos.length >= 4 ? '500px' : '530px';
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -94,48 +93,117 @@ function buildHtml(data) {
 <style>
 ${FONT_CSS}
 * { margin:0; padding:0; box-sizing:border-box; }
-body { width:940px; height:1200px; overflow:hidden; background:#e5e3de; }
-.card { width:940px; height:1200px; background:#e5e3de; position:relative; overflow:hidden; }
-.tri1 { position:absolute; bottom:0; left:0; width:0; height:0; border-style:solid; border-width:0 0 360px 460px; border-color:transparent transparent #1b5e2a transparent; }
-.tri2 { position:absolute; bottom:0; left:55px; width:0; height:0; border-style:solid; border-width:0 0 300px 380px; border-color:transparent transparent #2e8c44 transparent; }
-.tri3 { position:absolute; bottom:0; left:0; width:0; height:0; border-style:solid; border-width:0 0 70px 200px; border-color:transparent transparent #111 transparent; }
-.logo { position:absolute; top:38px; right:48px; }
-.title { position:absolute; top:48px; left:52px; font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:108px; line-height:0.9; color:#1a1a1a; text-transform:uppercase; letter-spacing:-2px; }
-.stamp { position:absolute; top:300px; right:52px; width:158px; height:158px; ${mostrar_selo ? '' : 'display:none;'} }
-.fields { position:absolute; top:490px; left:52px; right:52px; display:flex; flex-direction:column; gap:40px; }
-.field-row { display:flex; align-items:flex-start; gap:40px; }
-.field-label { font-family:'Barlow',sans-serif; font-weight:700; font-size:34px; color:#1a1a1a; min-width:210px; padding-top:14px; flex-shrink:0; }
-.field-value { font-family:'Barlow',sans-serif; font-weight:700; font-size:28px; color:#fff; background:#2e8c44; border-radius:50px; padding:14px 34px; flex:1; text-align:center; line-height:1.25; }
-.site { position:absolute; bottom:130px; left:0; right:0; text-align:center; font-family:'Barlow',sans-serif; font-weight:700; font-size:22px; color:#444; letter-spacing:1px; }
-${extraStyle}
+body { width:940px; height:1200px; overflow:hidden; background:#1e1e1e; }
+.card { width:940px; height:1200px; background:linear-gradient(145deg, #242824 0%, #181c18 60%, #111411 100%); position:relative; overflow:hidden; }
+
+/* Decorações */
+.glow { position:absolute; width:700px; height:700px; border-radius:50%; background:radial-gradient(circle, rgba(61,190,60,0.07) 0%, transparent 65%); top:-200px; right:-200px; pointer-events:none; }
+.side-bar { position:absolute; top:0; left:0; width:7px; height:100%; background:linear-gradient(180deg, #4ccc3c 0%, #1a8c28 55%, rgba(26,140,40,0) 100%); }
+.bottom-bar { position:absolute; bottom:0; left:0; right:0; height:4px; background:linear-gradient(90deg, transparent, #3dbe4a 30%, #1a8c28 70%, transparent); }
+.corner-deco { position:absolute; bottom:60px; right:0; width:320px; height:320px; opacity:0.04; }
+
+/* Header */
+.header { position:absolute; top:44px; left:52px; right:52px; display:flex; align-items:center; justify-content:space-between; }
+.logo-svg { width:180px; }
+.tag { background:linear-gradient(135deg, #3dbe4a, #1a7c28); color:#fff; font-family:'Barlow',sans-serif; font-weight:700; font-size:13px; padding:8px 22px; border-radius:100px; letter-spacing:2.5px; text-transform:uppercase; }
+
+/* Divisor */
+.divider { position:absolute; top:148px; left:52px; right:52px; height:1px; background:linear-gradient(90deg, rgba(61,190,74,0.5), rgba(61,190,74,0.1) 60%, transparent); }
+
+/* Título */
+.title { position:absolute; top:175px; left:52px; right:52px; }
+.title-l1 { font-family:'Barlow',sans-serif; font-weight:300; font-size:${titleSize}; color:rgba(255,255,255,0.75); line-height:1; letter-spacing:-1px; text-transform:uppercase; }
+.title-l2 { font-family:'Barlow Condensed',sans-serif; font-weight:900; font-size:${titleSize}; color:#ffffff; line-height:0.95; letter-spacing:-2px; text-transform:uppercase; margin-top:4px; }
+.title-accent { width:64px; height:5px; background:linear-gradient(90deg, #4ccc3c, #1a8c28); border-radius:10px; margin-top:22px; }
+
+/* Campos */
+.fields { position:absolute; top:${fieldsTop}; left:52px; right:52px; display:flex; flex-direction:column; gap:22px; }
+.field-row { display:flex; align-items:center; gap:28px; }
+.field-label { font-family:'Barlow',sans-serif; font-weight:700; font-size:13px; color:rgba(255,255,255,0.35); letter-spacing:3px; text-transform:uppercase; min-width:188px; flex-shrink:0; }
+.field-value { flex:1; background:linear-gradient(135deg, rgba(61,190,74,0.12), rgba(26,140,40,0.08)); border:1px solid rgba(61,190,74,0.25); border-radius:14px; padding:15px 28px; font-family:'Barlow',sans-serif; font-weight:700; font-size:26px; color:#fff; text-align:center; line-height:1.3; }
+
+/* Selo */
+.stamp { position:absolute; top:290px; right:52px; width:140px; height:140px; ${mostrar_selo ? '' : 'display:none;'} }
+
+/* Footer */
+.footer { position:absolute; bottom:22px; left:52px; right:52px; display:flex; align-items:center; justify-content:space-between; }
+.footer-url { font-family:'Barlow',sans-serif; font-weight:400; font-size:16px; color:rgba(255,255,255,0.2); letter-spacing:3px; text-transform:uppercase; }
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="tri1"></div>
-  <div class="tri2"></div>
-  <div class="tri3"></div>
-  <div class="logo">
-    <svg width="76" height="60" viewBox="0 0 76 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="4,52 20,8 38,36 56,8 72,52 62,52 56,28 38,52 20,28 14,52" fill="#1a1a1a"/>
-      <polyline points="18,30 30,44 58,12" fill="none" stroke="#2e8c44" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <div class="glow"></div>
+  <div class="side-bar"></div>
+  <div class="bottom-bar"></div>
+
+  <!-- Decoração canto -->
+  <svg class="corner-deco" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="320" cy="320" r="280" stroke="white" stroke-width="2"/>
+    <circle cx="320" cy="320" r="200" stroke="white" stroke-width="1.5"/>
+    <circle cx="320" cy="320" r="120" stroke="white" stroke-width="1"/>
+  </svg>
+
+  <!-- Header -->
+  <div class="header">
+    <!-- Logo CheckNegócios SVG -->
+    <svg class="logo-svg" viewBox="0 0 320 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Ícone M + check -->
+      <g transform="translate(0, 4)">
+        <polygon points="6,66 22,14 40,46 58,14 74,66 64,66 58,36 40,62 22,36 16,66" fill="white"/>
+        <polyline points="20,38 34,56 66,16" fill="none" stroke="url(#g1)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <defs>
+        <linearGradient id="g1" x1="20" y1="38" x2="66" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#7dde4a"/>
+          <stop offset="100%" stop-color="#2a9e30"/>
+        </linearGradient>
+      </defs>
+      <!-- check texto -->
+      <text x="90" y="62" font-family="'Barlow',sans-serif" font-weight="800" font-size="52" fill="white" letter-spacing="-1">check</text>
+      <!-- negócios texto -->
+      <text x="90" y="76" font-family="'Barlow',sans-serif" font-weight="600" font-size="18" fill="url(#g2)" letter-spacing="1">negócios</text>
+      <defs>
+        <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7dde4a"/>
+          <stop offset="100%" stop-color="#2a9e30"/>
+        </linearGradient>
+      </defs>
     </svg>
+
+    <div class="tag">Comunicado</div>
   </div>
+
+  <div class="divider"></div>
+
+  <!-- Título -->
   <div class="title">
-    <div>${titulo_linha1}</div>
-    <div>${titulo_linha2}</div>
+    <div class="title-l1">${titulo_linha1}</div>
+    <div class="title-l2">${titulo_linha2}</div>
+    <div class="title-accent"></div>
   </div>
+
+  <!-- Selo -->
   <div class="stamp">
-    <svg viewBox="0 0 158 158" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="79" cy="79" r="72" stroke="#1a3a8c" stroke-width="3" stroke-dasharray="6 3" opacity="0.7"/>
-      <circle cx="79" cy="79" r="60" stroke="#1a3a8c" stroke-width="2" opacity="0.5"/>
-      <rect x="14" y="62" width="130" height="34" rx="6" fill="#1a3a8c" opacity="0.15"/>
-      <rect x="14" y="62" width="130" height="34" rx="6" fill="none" stroke="#1a3a8c" stroke-width="2" opacity="0.6"/>
-      <text x="79" y="85" font-family="Arial" font-weight="bold" font-size="13" fill="#1a3a8c" text-anchor="middle" opacity="0.85" letter-spacing="2">NOVO CONV&#xCA;NIO</text>
+    <svg viewBox="0 0 140 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="70" cy="70" r="64" stroke="#4ccc3c" stroke-width="2" stroke-dasharray="5 3" opacity="0.6"/>
+      <circle cx="70" cy="70" r="52" stroke="#4ccc3c" stroke-width="1.5" opacity="0.4"/>
+      <rect x="10" y="53" width="120" height="34" rx="6" fill="#4ccc3c" opacity="0.1"/>
+      <rect x="10" y="53" width="120" height="34" rx="6" fill="none" stroke="#4ccc3c" stroke-width="1.5" opacity="0.5"/>
+      <text x="70" y="76" font-family="Arial" font-weight="bold" font-size="11" fill="#4ccc3c" text-anchor="middle" opacity="0.8" letter-spacing="2">NOVO CONVÊNIO</text>
     </svg>
   </div>
+
+  <!-- Campos -->
   <div class="fields">${camposHtml}</div>
-  <div class="site">checknegocios.com.br</div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-url">checknegocios.com.br</div>
+    <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" opacity="0.25">
+      <polygon points="3,34 11,8 20,24 29,8 37,34 32,34 29,18 20,32 11,18 8,34" fill="white"/>
+      <polyline points="10,20 17,30 32,10" fill="none" stroke="#4ccc3c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
 </div>
 </body>
 </html>`;

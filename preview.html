@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Preview 6 Estilos — CheckNegócios</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,300;0,400;0,600;0,700;0,800;0,900&family=Barlow+Condensed:wght@700;900&display=swap" rel="stylesheet">
+<style>
+body { background:#222; padding:40px; display:flex; flex-wrap:wrap; gap:32px; font-family:sans-serif; }
+h1 { color:#fff; width:100%; font-size:18px; margin-bottom:8px; }
+.wrap { display:flex; flex-direction:column; gap:8px; }
+.label { color:#aaa; font-size:12px; text-align:center; font-family:sans-serif; }
+.frame { width:376px; height:480px; position:relative; overflow:hidden; }
+/* scale 940x1200 → 376x480 = 0.4 */
+.inner { width:940px; height:1200px; transform:scale(0.4); transform-origin:top left; position:absolute; top:0; left:0; }
+
+/* ── LOGO SVG shared ── */
+</style>
+</head>
+<body>
+<h1>6 Estilos de Banner — CheckNegócios (escolha 1)</h1>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 1 — Escuro com alto contraste
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">1 — Escuro alto contraste</div>
+<div class="frame"><div class="inner">
+<style>
+.s1{width:940px;height:1200px;background:#111;position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s1 .sb{position:absolute;top:0;left:0;width:8px;height:100%;background:linear-gradient(180deg,#5de03a,#1a8c00 60%,transparent);}
+.s1 .sh{position:absolute;top:44px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s1 .stag{background:linear-gradient(135deg,#4ccc3c,#1a7c00);color:#fff;font-weight:700;font-size:14px;padding:9px 24px;border-radius:100px;letter-spacing:2px;text-transform:uppercase;}
+.s1 .sdiv{position:absolute;top:152px;left:52px;right:52px;height:1px;background:linear-gradient(90deg,#5de03a,rgba(93,224,58,0.1),transparent);}
+.s1 .st{position:absolute;top:180px;left:52px;}
+.s1 .st1{font-size:80px;font-weight:300;color:rgba(255,255,255,0.6);line-height:1;text-transform:uppercase;letter-spacing:-1px;}
+.s1 .st2{font-family:'Barlow Condensed',sans-serif;font-size:100px;font-weight:900;color:#fff;line-height:0.9;text-transform:uppercase;letter-spacing:-2px;}
+.s1 .sacc{width:70px;height:6px;background:linear-gradient(90deg,#5de03a,#1a8c00);border-radius:10px;margin-top:20px;}
+.s1 .sf{position:absolute;top:520px;left:52px;right:52px;display:flex;flex-direction:column;gap:20px;}
+.s1 .sr{display:flex;align-items:center;gap:24px;}
+.s1 .slb{font-size:12px;font-weight:700;color:rgba(255,255,255,0.3);letter-spacing:3px;text-transform:uppercase;min-width:180px;flex-shrink:0;}
+.s1 .slv{flex:1;background:rgba(93,224,58,0.1);border:1px solid rgba(93,224,58,0.3);border-radius:12px;padding:16px 28px;font-weight:700;font-size:26px;color:#fff;text-align:center;line-height:1.3;}
+.s1 .sft{position:absolute;bottom:24px;left:52px;right:52px;display:flex;justify-content:space-between;align-items:center;}
+.s1 .surl{font-size:15px;color:rgba(255,255,255,0.18);letter-spacing:3px;text-transform:uppercase;}
+.s1 .sbb{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#5de03a 30%,#1a8c00 70%,transparent);}
+</style>
+<div class="s1">
+  <div class="sb"></div><div class="sbb"></div>
+  <div class="sh">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs>
+        <linearGradient id="ck1" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#7ddd30"/><stop offset="45%" stop-color="#1a8c00"/><stop offset="100%" stop-color="#5cc820"/>
+        </linearGradient>
+      </defs>
+      <!-- M legs white -->
+      <polygon points="0,48 7,48 7,32" fill="white" opacity="0.8"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="white" opacity="0.35"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="white" opacity="0.8"/>
+      <!-- Check -->
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck1)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="white" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#5de03a" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag">Comunicado</div>
+  </div>
+  <div class="sdiv"></div>
+  <div class="st"><div class="st1">Alteração</div><div class="st2">Comercial</div><div class="sacc"></div></div>
+  <div class="sf">
+    <div class="sr"><div class="slb">Banco</div><div class="slv">Icred Financeira</div></div>
+    <div class="sr"><div class="slb">Tabela</div><div class="slv">INSS</div></div>
+    <div class="sr"><div class="slb">Convênio</div><div class="slv">Aumento de Taxa</div></div>
+    <div class="sr"><div class="slb">A Partir De</div><div class="slv">24/03/2026</div></div>
+  </div>
+  <div class="sft"><div class="surl">checknegocios.com.br</div></div>
+</div>
+</div></div></div>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 2 — Branco limpo
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">2 — Branco limpo</div>
+<div class="frame"><div class="inner">
+<style>
+.s2{width:940px;height:1200px;background:#fff;position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s2 .stop{position:absolute;top:0;left:0;right:0;height:220px;background:linear-gradient(135deg,#1a2e1a,#2a5c20);}
+.s2 .sh2{position:absolute;top:36px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s2 .stag2{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;font-weight:700;font-size:14px;padding:9px 24px;border-radius:100px;letter-spacing:2px;text-transform:uppercase;}
+.s2 .st2b{position:absolute;top:130px;left:52px;}
+.s2 .st2l1{font-size:72px;font-weight:300;color:rgba(255,255,255,0.7);line-height:1;text-transform:uppercase;letter-spacing:-1px;}
+.s2 .st2l2{font-family:'Barlow Condensed',sans-serif;font-size:90px;font-weight:900;color:#fff;line-height:0.9;text-transform:uppercase;letter-spacing:-2px;}
+.s2 .scard{position:absolute;top:260px;left:40px;right:40px;background:#fff;border-radius:24px;box-shadow:0 8px 40px rgba(0,0,0,0.1);padding:40px;}
+.s2 .sf2{display:flex;flex-direction:column;gap:20px;}
+.s2 .sr2{display:flex;align-items:center;gap:24px;}
+.s2 .slb2{font-size:12px;font-weight:700;color:#999;letter-spacing:3px;text-transform:uppercase;min-width:160px;flex-shrink:0;}
+.s2 .slv2{flex:1;background:linear-gradient(135deg,#f0faf0,#e0f5e0);border:2px solid #2a8c20;border-radius:12px;padding:16px 28px;font-weight:700;font-size:24px;color:#1a4c10;text-align:center;line-height:1.3;}
+.s2 .sft2{position:absolute;bottom:28px;left:52px;right:52px;text-align:center;}
+.s2 .surl2{font-size:14px;color:#bbb;letter-spacing:3px;text-transform:uppercase;}
+.s2 .sacc2{width:60px;height:5px;background:linear-gradient(90deg,#4ccc3c,#1a8c00);border-radius:10px;margin:12px 0 20px;}
+</style>
+<div class="s2">
+  <div class="stop"></div>
+  <div class="sh2">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs><linearGradient id="ck2" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#aef070"/><stop offset="45%" stop-color="#5de03a"/><stop offset="100%" stop-color="#9de040"/></linearGradient></defs>
+      <polygon points="0,48 7,48 7,32" fill="white" opacity="0.7"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="white" opacity="0.3"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="white" opacity="0.7"/>
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck2)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="white" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#aef070" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag2">Comunicado</div>
+  </div>
+  <div class="st2b"><div class="st2l1">Alteração</div><div class="st2l2">Comercial</div></div>
+  <div class="scard">
+    <div class="sacc2"></div>
+    <div class="sf2">
+      <div class="sr2"><div class="slb2">Banco</div><div class="slv2">Icred Financeira</div></div>
+      <div class="sr2"><div class="slb2">Tabela</div><div class="slv2">INSS</div></div>
+      <div class="sr2"><div class="slb2">Convênio</div><div class="slv2">Aumento de Taxa</div></div>
+      <div class="sr2"><div class="slb2">A Partir De</div><div class="slv2">24/03/2026</div></div>
+    </div>
+  </div>
+  <div class="sft2"><div class="surl2">checknegocios.com.br</div></div>
+</div>
+</div></div></div>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 3 — Verde vibrante
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">3 — Verde vibrante</div>
+<div class="frame"><div class="inner">
+<style>
+.s3{width:940px;height:1200px;background:linear-gradient(150deg,#0f2e0f 0%,#1a4a1a 40%,#0a1e0a 100%);position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s3 .sg{position:absolute;width:800px;height:800px;border-radius:50%;background:radial-gradient(circle,rgba(93,224,58,0.15) 0%,transparent 65%);top:-300px;right:-200px;}
+.s3 .sg2{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(93,224,58,0.08) 0%,transparent 65%);bottom:-150px;left:-100px;}
+.s3 .sh3{position:absolute;top:44px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s3 .stag3{background:rgba(93,224,58,0.2);border:1.5px solid rgba(93,224,58,0.5);color:#5de03a;font-weight:700;font-size:14px;padding:9px 24px;border-radius:100px;letter-spacing:2px;text-transform:uppercase;}
+.s3 .sdiv3{position:absolute;top:152px;left:52px;right:52px;height:1px;background:linear-gradient(90deg,rgba(93,224,58,0.6),rgba(93,224,58,0.1),transparent);}
+.s3 .st3{position:absolute;top:178px;left:52px;}
+.s3 .st3l1{font-size:80px;font-weight:300;color:rgba(93,224,58,0.6);line-height:1;text-transform:uppercase;letter-spacing:-1px;}
+.s3 .st3l2{font-family:'Barlow Condensed',sans-serif;font-size:104px;font-weight:900;color:#5de03a;line-height:0.9;text-transform:uppercase;letter-spacing:-2px;text-shadow:0 0 40px rgba(93,224,58,0.4);}
+.s3 .sacc3{width:70px;height:5px;background:#5de03a;border-radius:10px;margin-top:20px;box-shadow:0 0 12px rgba(93,224,58,0.6);}
+.s3 .sf3{position:absolute;top:520px;left:52px;right:52px;display:flex;flex-direction:column;gap:20px;}
+.s3 .sr3{display:flex;align-items:center;gap:24px;}
+.s3 .slb3{font-size:12px;font-weight:700;color:rgba(93,224,58,0.4);letter-spacing:3px;text-transform:uppercase;min-width:180px;flex-shrink:0;}
+.s3 .slv3{flex:1;background:rgba(93,224,58,0.08);border:1.5px solid rgba(93,224,58,0.4);border-radius:12px;padding:16px 28px;font-weight:700;font-size:26px;color:#fff;text-align:center;line-height:1.3;}
+.s3 .sft3{position:absolute;bottom:28px;left:52px;font-size:15px;color:rgba(93,224,58,0.25);letter-spacing:3px;text-transform:uppercase;}
+</style>
+<div class="s3">
+  <div class="sg"></div><div class="sg2"></div>
+  <div class="sh3">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs><linearGradient id="ck3" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7ddd30"/><stop offset="45%" stop-color="#3acc10"/><stop offset="100%" stop-color="#5cc820"/></linearGradient></defs>
+      <polygon points="0,48 7,48 7,32" fill="white" opacity="0.3"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="white" opacity="0.12"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="white" opacity="0.3"/>
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck3)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="white" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#5de03a" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag3">Comunicado</div>
+  </div>
+  <div class="sdiv3"></div>
+  <div class="st3"><div class="st3l1">Alteração</div><div class="st3l2">Comercial</div><div class="sacc3"></div></div>
+  <div class="sf3">
+    <div class="sr3"><div class="slb3">Banco</div><div class="slv3">Icred Financeira</div></div>
+    <div class="sr3"><div class="slb3">Tabela</div><div class="slv3">INSS</div></div>
+    <div class="sr3"><div class="slb3">Convênio</div><div class="slv3">Aumento de Taxa</div></div>
+    <div class="sr3"><div class="slb3">A Partir De</div><div class="slv3">24/03/2026</div></div>
+  </div>
+  <div class="sft3">checknegocios.com.br</div>
+</div>
+</div></div></div>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 4 — Split (escuro + claro)
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">4 — Split escuro/claro</div>
+<div class="frame"><div class="inner">
+<style>
+.s4{width:940px;height:1200px;background:#f5f5f0;position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s4 .stopo{position:absolute;top:0;left:0;right:0;height:480px;background:linear-gradient(135deg,#1a2e1a,#243824);}
+.s4 .spat{position:absolute;top:380px;left:0;right:0;height:120px;background:#f5f5f0;clip-path:ellipse(54% 60px at 50% 100%);}
+.s4 .sh4{position:absolute;top:40px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s4 .stag4{background:rgba(93,224,58,0.2);border:1.5px solid rgba(93,224,58,0.4);color:#5de03a;font-weight:700;font-size:14px;padding:9px 24px;border-radius:100px;letter-spacing:2px;text-transform:uppercase;}
+.s4 .st4{position:absolute;top:160px;left:52px;}
+.s4 .st4l1{font-size:78px;font-weight:300;color:rgba(255,255,255,0.55);line-height:1;text-transform:uppercase;letter-spacing:-1px;}
+.s4 .st4l2{font-family:'Barlow Condensed',sans-serif;font-size:98px;font-weight:900;color:#fff;line-height:0.9;text-transform:uppercase;letter-spacing:-2px;}
+.s4 .sf4{position:absolute;top:510px;left:52px;right:52px;display:flex;flex-direction:column;gap:20px;}
+.s4 .sr4{display:flex;align-items:center;gap:24px;}
+.s4 .slb4{font-size:12px;font-weight:700;color:#999;letter-spacing:3px;text-transform:uppercase;min-width:170px;flex-shrink:0;}
+.s4 .slv4{flex:1;background:#fff;border:2px solid #2a8c20;border-radius:12px;padding:16px 28px;font-weight:700;font-size:24px;color:#1a3e10;text-align:center;box-shadow:0 2px 12px rgba(42,140,32,0.1);line-height:1.3;}
+.s4 .sline4{position:absolute;top:490px;left:52px;right:52px;height:2px;background:linear-gradient(90deg,#2a8c20,rgba(42,140,32,0.1));}
+.s4 .sft4{position:absolute;bottom:28px;left:52px;right:52px;display:flex;justify-content:space-between;align-items:center;}
+.s4 .surl4{font-size:14px;color:#bbb;letter-spacing:3px;text-transform:uppercase;}
+</style>
+<div class="s4">
+  <div class="stopo"></div><div class="spat"></div>
+  <div class="sh4">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs><linearGradient id="ck4" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7ddd30"/><stop offset="45%" stop-color="#1a8c00"/><stop offset="100%" stop-color="#5cc820"/></linearGradient></defs>
+      <polygon points="0,48 7,48 7,32" fill="white" opacity="0.7"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="white" opacity="0.25"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="white" opacity="0.7"/>
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck4)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="white" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#5de03a" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag4">Comunicado</div>
+  </div>
+  <div class="st4"><div class="st4l1">Alteração</div><div class="st4l2">Comercial</div></div>
+  <div class="sline4"></div>
+  <div class="sf4">
+    <div class="sr4"><div class="slb4">Banco</div><div class="slv4">Icred Financeira</div></div>
+    <div class="sr4"><div class="slb4">Tabela</div><div class="slv4">INSS</div></div>
+    <div class="sr4"><div class="slb4">Convênio</div><div class="slv4">Aumento de Taxa</div></div>
+    <div class="sr4"><div class="slb4">A Partir De</div><div class="slv4">24/03/2026</div></div>
+  </div>
+  <div class="sft4"><div class="surl4">checknegocios.com.br</div></div>
+</div>
+</div></div></div>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 5 — Cinza neutro moderno
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">5 — Cinza neutro moderno</div>
+<div class="frame"><div class="inner">
+<style>
+.s5{width:940px;height:1200px;background:#f0f2f0;position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s5 .sb5{position:absolute;top:0;left:0;width:10px;height:100%;background:linear-gradient(180deg,#2a8c20,#1a5c10 60%,rgba(26,92,16,0));}
+.s5 .sh5{position:absolute;top:44px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s5 .stag5{background:linear-gradient(135deg,#2a8c20,#1a5c10);color:#fff;font-weight:700;font-size:14px;padding:9px 24px;border-radius:100px;letter-spacing:2px;text-transform:uppercase;}
+.s5 .sdiv5{position:absolute;top:152px;left:52px;right:52px;height:2px;background:linear-gradient(90deg,#2a8c20,rgba(42,140,32,0.1),transparent);}
+.s5 .st5{position:absolute;top:178px;left:52px;}
+.s5 .st5l1{font-size:82px;font-weight:300;color:rgba(0,0,0,0.3);line-height:1;text-transform:uppercase;letter-spacing:-1px;}
+.s5 .st5l2{font-family:'Barlow Condensed',sans-serif;font-size:102px;font-weight:900;color:#1a2e1a;line-height:0.9;text-transform:uppercase;letter-spacing:-2px;}
+.s5 .sacc5{width:70px;height:6px;background:linear-gradient(90deg,#2a8c20,#5de03a);border-radius:10px;margin-top:20px;}
+.s5 .sf5{position:absolute;top:520px;left:52px;right:52px;display:flex;flex-direction:column;gap:20px;}
+.s5 .sr5{display:flex;align-items:center;gap:24px;}
+.s5 .slb5{font-size:12px;font-weight:700;color:#999;letter-spacing:3px;text-transform:uppercase;min-width:180px;flex-shrink:0;}
+.s5 .slv5{flex:1;background:#fff;border-left:5px solid #2a8c20;border-radius:0 12px 12px 0;padding:16px 28px;font-weight:700;font-size:26px;color:#1a2e1a;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,0.06);line-height:1.3;}
+.s5 .sft5{position:absolute;bottom:28px;left:52px;font-size:14px;color:#bbb;letter-spacing:3px;text-transform:uppercase;}
+</style>
+<div class="s5">
+  <div class="sb5"></div>
+  <div class="sh5">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs><linearGradient id="ck5" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7ddd30"/><stop offset="45%" stop-color="#1a8c00"/><stop offset="100%" stop-color="#5cc820"/></linearGradient></defs>
+      <polygon points="0,48 7,48 7,32" fill="#2a8c20" opacity="0.6"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="#2a8c20" opacity="0.2"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="#2a8c20" opacity="0.6"/>
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck5)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="#1a2e1a" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#2a8c20" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag5">Comunicado</div>
+  </div>
+  <div class="sdiv5"></div>
+  <div class="st5"><div class="st5l1">Alteração</div><div class="st5l2">Comercial</div><div class="sacc5"></div></div>
+  <div class="sf5">
+    <div class="sr5"><div class="slb5">Banco</div><div class="slv5">Icred Financeira</div></div>
+    <div class="sr5"><div class="slb5">Tabela</div><div class="slv5">INSS</div></div>
+    <div class="sr5"><div class="slb5">Convênio</div><div class="slv5">Aumento de Taxa</div></div>
+    <div class="sr5"><div class="slb5">A Partir De</div><div class="slv5">24/03/2026</div></div>
+  </div>
+  <div class="sft5">checknegocios.com.br</div>
+</div>
+</div></div></div>
+
+<!-- ═══════════════════════════════════════════════════
+     ESTILO 6 — Bold impactante
+════════════════════════════════════════════════════ -->
+<div class="wrap">
+<div class="label">6 — Bold impactante</div>
+<div class="frame"><div class="inner">
+<style>
+.s6{width:940px;height:1200px;background:#0d1a0d;position:relative;overflow:hidden;font-family:'Barlow',sans-serif;}
+.s6 .sbg6{position:absolute;top:0;left:0;right:0;height:520px;background:linear-gradient(135deg,#1a3e1a,#0d1a0d);}
+.s6 .sacc6b{position:absolute;top:0;left:0;right:0;height:7px;background:linear-gradient(90deg,#5de03a,#1a8c00 60%,#5de03a);}
+.s6 .sh6{position:absolute;top:36px;left:52px;right:52px;display:flex;align-items:center;justify-content:space-between;}
+.s6 .stag6{border:2px solid #5de03a;color:#5de03a;font-weight:700;font-size:14px;padding:9px 24px;border-radius:6px;letter-spacing:2px;text-transform:uppercase;}
+.s6 .st6{position:absolute;top:150px;left:52px;right:52px;}
+.s6 .st6l1{font-size:76px;font-weight:800;color:rgba(255,255,255,0.2);line-height:1;text-transform:uppercase;letter-spacing:4px;}
+.s6 .st6l2{font-family:'Barlow Condensed',sans-serif;font-size:130px;font-weight:900;color:#fff;line-height:0.85;text-transform:uppercase;letter-spacing:-3px;}
+.s6 .sl6{position:absolute;top:490px;left:52px;right:52px;height:3px;background:#5de03a;}
+.s6 .sf6{position:absolute;top:520px;left:52px;right:52px;display:flex;flex-direction:column;gap:18px;}
+.s6 .sr6{display:flex;align-items:stretch;gap:0;}
+.s6 .slb6{font-size:12px;font-weight:900;color:#5de03a;letter-spacing:3px;text-transform:uppercase;width:200px;flex-shrink:0;display:flex;align-items:center;background:rgba(93,224,58,0.06);padding:0 20px;border-radius:10px 0 0 10px;}
+.s6 .slv6{flex:1;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-left:none;border-radius:0 10px 10px 0;padding:16px 28px;font-weight:800;font-size:26px;color:#fff;text-align:center;line-height:1.3;}
+.s6 .sft6{position:absolute;bottom:28px;left:52px;right:52px;display:flex;justify-content:space-between;align-items:center;}
+.s6 .surl6{font-size:14px;color:rgba(93,224,58,0.25);letter-spacing:4px;text-transform:uppercase;}
+</style>
+<div class="s6">
+  <div class="sbg6"></div><div class="sacc6b"></div>
+  <div class="sh6">
+    <svg width="190" height="52" viewBox="0 0 190 52" fill="none">
+      <defs><linearGradient id="ck6" x1="0" y1="34" x2="52" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#7ddd30"/><stop offset="45%" stop-color="#1a8c00"/><stop offset="100%" stop-color="#5cc820"/></linearGradient></defs>
+      <polygon points="0,48 7,48 7,32" fill="white" opacity="0.4"/>
+      <polygon points="7,32 15,48 27,32 38,48 47,32 47,38 38,44 27,38 15,44 10,48 7,48" fill="white" opacity="0.12"/>
+      <polygon points="40,32 47,32 47,48 40,48" fill="white" opacity="0.4"/>
+      <path d="M3,22 L7,17 L24,36 L50,2 L54,7 L24,44 Z" fill="url(#ck6)"/>
+      <text x="64" y="38" font-family="Barlow,sans-serif" font-weight="800" font-size="34" fill="white" letter-spacing="-0.5">check</text>
+      <text x="65" y="50" font-family="Barlow,sans-serif" font-weight="600" font-size="12" fill="#5de03a" letter-spacing="1.5">negócios</text>
+    </svg>
+    <div class="stag6">Comunicado</div>
+  </div>
+  <div class="st6"><div class="st6l1">Alteração</div><div class="st6l2">Comercial</div></div>
+  <div class="sl6"></div>
+  <div class="sf6">
+    <div class="sr6"><div class="slb6">Banco</div><div class="slv6">Icred Financeira</div></div>
+    <div class="sr6"><div class="slb6">Tabela</div><div class="slv6">INSS</div></div>
+    <div class="sr6"><div class="slb6">Convênio</div><div class="slv6">Aumento de Taxa</div></div>
+    <div class="sr6"><div class="slb6">A Partir De</div><div class="slv6">24/03/2026</div></div>
+  </div>
+  <div class="sft6"><div class="surl6">checknegocios.com.br</div></div>
+</div>
+</div></div></div>
+
+</body>
+</html>
