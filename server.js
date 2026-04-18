@@ -91,7 +91,9 @@ async function getLogoBuf(targetW) {
     .toBuffer();
 }
 
-// ─── GPT-4o Vision: encontra região com espaço vazio/escuro para o logo ───────
+// ─── GPT-4o Vision: decide estratégia de posicionamento do logo ──────────────
+// Estratégia "place": posiciona nas coordenadas x%/y% de espaço vazio
+// Estratégia "footer": imagem muito cheia → adiciona faixa de rodapé escura
 async function findLogoPlacement(base64, mimeType, imgW, imgH) {
   const resp = await openai.chat.completions.create({
     model: 'gpt-4o',
@@ -101,22 +103,24 @@ async function findLogoPlacement(base64, mimeType, imgW, imgH) {
       content: [
         {
           type: 'text',
-          text: `This is a marketing image (${imgW}x${imgH}px). I need to place a "CheckNegócios" brand logo overlay on it.
+          text: `This is a marketing image (${imgW}x${imgH}px). I need to add a "CheckNegócios" brand logo to it.
 
-The logo is a horizontal rectangle (roughly 28% of image width, 10% of image height).
+The logo is horizontal (roughly 30% of image width, ~10% of image height).
 
-Your task: find the best region to place it where:
-1. There is NO text, NO face, NO important graphic element
-2. The background is relatively dark, uniform, or has low visual complexity
-3. The logo won't cover any critical content
+Analyze the image carefully and choose ONE of two strategies:
 
-Look carefully at the ENTIRE image — the empty space could be anywhere (a corner, an edge strip, a gap between elements).
+STRATEGY A — "place": There is a clearly visible empty/dark region (no text, no face, no important graphic) large enough for the logo. Return the top-left corner of that region as percentages.
 
-Reply with ONLY valid JSON — no markdown, no explanation outside the JSON:
-{"x_pct": 5, "y_pct": 85, "reason": "dark empty strip at bottom-left below the main text"}
+STRATEGY B — "footer": The image is too busy or packed with content in all areas. We will add a dark footer strip below the image and place the logo there.
 
-- x_pct: left edge of logo placement, as % of image width (0–72)
-- y_pct: top edge of logo placement, as % of image height (0–90)`,
+Reply with ONLY valid JSON, no markdown:
+
+If strategy A: {"strategy": "place", "x_pct": 5, "y_pct": 85, "reason": "..."}
+If strategy B: {"strategy": "footer", "reason": "..."}
+
+- x_pct: 0–70 (left edge of logo as % of image width)
+- y_pct: 0–88 (top edge of logo as % of image height)
+- Choose "footer" when there is genuinely no clean space available in the image`,
         },
         {
           type: 'image_url',
@@ -129,13 +133,18 @@ Reply with ONLY valid JSON — no markdown, no explanation outside the JSON:
   try {
     const text = resp.choices[0].message.content.trim();
     const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-    const x = Math.min(Math.max(json.x_pct, 0), 72);
-    const y = Math.min(Math.max(json.y_pct, 0), 90);
-    console.log(`[Overlay] IA posicionou em x=${x}% y=${y}% — ${json.reason}`);
-    return { x_pct: x, y_pct: y };
+    console.log(`[Overlay] estratégia=${json.strategy} — ${json.reason}`);
+    if (json.strategy === 'place') {
+      return {
+        strategy: 'place',
+        x_pct: Math.min(Math.max(Number(json.x_pct) || 4, 0), 70),
+        y_pct: Math.min(Math.max(Number(json.y_pct) || 85, 0), 88),
+      };
+    }
+    return { strategy: 'footer' };
   } catch (e) {
-    console.warn('[Overlay] Falha ao parsear posição:', e.message, '— usando bottom-left padrão');
-    return { x_pct: 4, y_pct: 85 };
+    console.warn('[Overlay] Falha ao parsear resposta da IA:', e.message, '— usando footer');
+    return { strategy: 'footer' };
   }
 }
 
@@ -565,26 +574,37 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // IA analisa a imagem e encontra a região com espaço vazio para o logo
+    // IA decide a estratégia: "place" (espaço vazio) ou "footer" (faixa de rodapé)
     const mimeType = req.body.mimeType || 'image/jpeg';
-    const { x_pct, y_pct } = await findLogoPlacement(image, mimeType, width, height);
+    const placement = await findLogoPlacement(image, mimeType, width, height);
 
-    // Dimensões do logo (~28% da largura da imagem)
-    const logoW = Math.round(width * 0.28);
-    const logoH = Math.round(logoW / 2.8);
-
-    // Converte % em pixels
-    const left = Math.round((x_pct / 100) * width);
-    const top  = Math.round((y_pct / 100) * height);
-
-    // Carrega e redimensiona a logo real (logo-cn.png transparente)
+    // Dimensões do logo (~30% da largura)
+    const logoW = Math.round(width * 0.30);
     const logoBuf = await getLogoBuf(logoW);
+    const logoMeta = await sharp(logoBuf).metadata();
+    const logoH = logoMeta.height;
 
-    // Compõe o logo sobre a imagem original sem alterar o canvas
-    const result = await sharp(inputBuf)
-      .composite([{ input: logoBuf, top, left, blend: 'over' }])
-      .png()
-      .toBuffer();
+    let result;
+
+    if (placement.strategy === 'place') {
+      // Coloca o logo nas coordenadas escolhidas pela IA
+      const left = Math.round((placement.x_pct / 100) * width);
+      const top  = Math.round((placement.y_pct / 100) * height);
+      result = await sharp(inputBuf)
+        .composite([{ input: logoBuf, top, left, blend: 'over' }])
+        .png()
+        .toBuffer();
+    } else {
+      // Adiciona faixa de rodapé escura abaixo da imagem e coloca o logo centralizado à esquerda
+      const stripH = Math.round(logoH * 1.5);
+      const logoTop  = Math.round((stripH - logoH) / 2);
+      const logoLeft = Math.round(width * 0.04);
+      result = await sharp(inputBuf)
+        .extend({ bottom: stripH, background: { r: 17, g: 20, b: 17 } })
+        .composite([{ input: logoBuf, top: height + logoTop, left: logoLeft, blend: 'over' }])
+        .png()
+        .toBuffer();
+    }
 
     const base64 = result.toString('base64');
     res.json({ image: base64 });
