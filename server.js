@@ -577,20 +577,9 @@ app.post('/overlay', async (req, res) => {
     const left = Math.round((x_pct / 100) * width);
     const top  = Math.round((y_pct / 100) * height);
 
-    // Cria fundo escuro semi-transparente atrás do logo para legibilidade universal
-    const pad = Math.round(logoW * 0.06);
-    const bgW = logoW + pad * 2;
-    const bgH = logoH + pad * 2;
-    const bgBuf = await sharp({
-      create: { width: bgW, height: bgH, channels: 4, background: { r: 10, g: 13, b: 10, alpha: 180 } }
-    }).png().toBuffer();
-
-    // Compõe: primeiro o fundo, depois o logo centrado sobre ele
+    // Compõe a logo diretamente sobre a imagem — sem caixa de fundo
     const result = await sharp(inputBuf)
-      .composite([
-        { input: bgBuf,  top: Math.max(0, top - pad), left: Math.max(0, left - pad), blend: 'over' },
-        { input: logoBuf, top, left, blend: 'over' },
-      ])
+      .composite([{ input: logoBuf, top, left, blend: 'over' }])
       .png()
       .toBuffer();
 
