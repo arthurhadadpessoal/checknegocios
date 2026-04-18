@@ -207,6 +207,20 @@ const UI_HTML = `<!DOCTYPE html>
   .drop-text strong { color: var(--white); }
   .file-name { margin-top: 8px; font-size: 13px; color: var(--green); font-weight: 600; }
 
+  /* Position picker */
+  .pos-picker { position: relative; display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
+  .pos-picker.visible { display: block; }
+  .pos-picker img { width: 100%; display: block; border-radius: 12px; }
+  .pos-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; padding: 10px; gap: 0; }
+  .pos-btn {
+    background: rgba(76,204,60,0.15); border: 2px solid rgba(76,204,60,0.4); border-radius: 8px;
+    color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    cursor: pointer; transition: background 0.15s, border-color 0.15s; margin: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pos-btn:hover, .pos-btn.active { background: rgba(76,204,60,0.55); border-color: #4ccc3c; color: white; }
+  .pos-label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 10px; }
+
   /* Form */
   .field { margin-bottom: 16px; }
   label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
@@ -273,7 +287,7 @@ const UI_HTML = `<!DOCTYPE html>
   <!-- ── Cenário 1: Overlay de Logo ── -->
   <div class="card">
     <div class="card-title">Overlay de Logo</div>
-    <div class="card-desc">Adiciona o rodapé CheckNegócios em qualquer imagem de parceiro. Aceita JPG, PNG ou WebP.</div>
+    <div class="card-desc">Sobe a imagem do parceiro, escolhe onde quer o logo CN e baixa.</div>
 
     <div class="drop-zone" id="dropZone1">
       <input type="file" id="fileInput" accept="image/*">
@@ -282,7 +296,19 @@ const UI_HTML = `<!DOCTYPE html>
       <div class="file-name" id="fileName1"></div>
     </div>
 
-    <button class="btn btn-primary" id="btnOverlay" disabled>Adicionar Logo CN</button>
+    <!-- Preview da imagem com seletor de posição nos cantos -->
+    <div class="pos-picker" id="posPicker">
+      <img id="posPreviewImg" src="" alt="">
+      <div class="pos-overlay">
+        <button class="pos-btn" data-pos="top_left">↖ AQUI</button>
+        <button class="pos-btn" data-pos="top_right">↗ AQUI</button>
+        <button class="pos-btn" data-pos="bottom_left">↙ AQUI</button>
+        <button class="pos-btn" data-pos="bottom_right">↘ AQUI</button>
+      </div>
+    </div>
+    <div class="pos-label" id="posLabel" style="display:none">Clique no canto onde quer o logo</div>
+
+    <button class="btn btn-primary" id="btnOverlay" disabled>Aplicar Logo CN</button>
 
     <div class="spinner" id="spin1"><div class="spin"></div> Processando imagem…</div>
     <div class="error-msg" id="err1"></div>
@@ -343,41 +369,57 @@ const UI_HTML = `<!DOCTYPE html>
 
 <script>
 // ── Overlay ──────────────────────────────────────────────────────────────────
-const fileInput = document.getElementById('fileInput');
-const dropZone1 = document.getElementById('dropZone1');
-const fileName1 = document.getElementById('fileName1');
-const btnOverlay = document.getElementById('btnOverlay');
+const fileInput      = document.getElementById('fileInput');
+const dropZone1      = document.getElementById('dropZone1');
+const fileName1      = document.getElementById('fileName1');
+const btnOverlay     = document.getElementById('btnOverlay');
+const posPicker      = document.getElementById('posPicker');
+const posPreviewImg  = document.getElementById('posPreviewImg');
+const posLabel       = document.getElementById('posLabel');
 
 let selectedFile = null;
+let selectedPos  = 'bottom_left'; // padrão
 
 function setFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
   selectedFile = file;
   fileName1.textContent = file.name;
+
+  // Mostra preview inline para o usuário escolher o canto
+  const reader = new FileReader();
+  reader.onload = e => {
+    posPreviewImg.src = e.target.result;
+    posPicker.classList.add('visible');
+    posLabel.style.display = 'block';
+    // Seleciona bottom_left por padrão
+    selectPos('bottom_left');
+  };
+  reader.readAsDataURL(file);
+}
+
+function selectPos(pos) {
+  selectedPos = pos;
+  document.querySelectorAll('.pos-btn').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
   btnOverlay.disabled = false;
 }
 
-fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+document.querySelectorAll('.pos-btn').forEach(b => b.addEventListener('click', () => selectPos(b.dataset.pos)));
 
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
 dropZone1.addEventListener('dragover', e => { e.preventDefault(); dropZone1.classList.add('drag-over'); });
 dropZone1.addEventListener('dragleave', () => dropZone1.classList.remove('drag-over'));
-dropZone1.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone1.classList.remove('drag-over');
-  setFile(e.dataTransfer.files[0]);
-});
+dropZone1.addEventListener('drop', e => { e.preventDefault(); dropZone1.classList.remove('drag-over'); setFile(e.dataTransfer.files[0]); });
 
 btnOverlay.addEventListener('click', async () => {
   if (!selectedFile) return;
   setLoading('overlay', true);
   clearError('err1');
   try {
-    // Converte arquivo para base64 no browser antes de enviar como JSON
     const base64 = await fileToBase64(selectedFile);
     const r = await fetch('/overlay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mimeType: selectedFile.type }),
+      body: JSON.stringify({ image: base64, mimeType: selectedFile.type, position: selectedPos }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Erro desconhecido');
@@ -392,7 +434,7 @@ btnOverlay.addEventListener('click', async () => {
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]); // remove data URI prefix
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -582,19 +624,25 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // Análise de pixels: encontra a região mais uniforme dentro da imagem
-    const { x_pct, y_pct } = await findLogoPlacement(inputBuf, width, height);
+    // Posição escolhida pelo usuário via UI
+    const position = req.body.position || 'bottom_left';
 
-    // Dimensões do logo (~22% da largura — discreto mas visível)
-    const logoW = Math.round(width * 0.22);
+    // Dimensões do logo (~25% da largura)
+    const logoW = Math.round(width * 0.25);
     const logoBuf = await getLogoBuf(logoW);
     const logoMeta = await sharp(logoBuf).metadata();
     const logoH = logoMeta.height;
+    const margin = Math.round(width * 0.03);
 
-    const left = Math.round((x_pct / 100) * width);
-    const top  = Math.round((y_pct / 100) * height);
+    const posMap = {
+      top_left:     { top: margin,                   left: margin },
+      top_right:    { top: margin,                   left: width - logoW - margin },
+      bottom_left:  { top: height - logoH - margin,  left: margin },
+      bottom_right: { top: height - logoH - margin,  left: width - logoW - margin },
+    };
+    const { top, left } = posMap[position] || posMap['bottom_left'];
+    console.log(`[Overlay] position=${position} top=${top} left=${left} logo=${logoW}x${logoH}`);
 
-    // Compõe a logo diretamente sobre a imagem — sem caixa de fundo
     const result = await sharp(inputBuf)
       .composite([{ input: logoBuf, top, left, blend: 'over' }])
       .png()
