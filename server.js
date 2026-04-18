@@ -545,28 +545,31 @@ app.post('/overlay', async (req, res) => {
 
     const inputBuf = Buffer.from(image, 'base64');
     const meta = await sharp(inputBuf).metadata();
-    const { width } = meta;
-    console.log(`[Overlay] ${width}px wide, format=${meta.format}`);
+    const { width, height } = meta;
+    console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
     const footerH = Math.max(90, Math.round(width * 0.085));
 
-    // Gera o rodapé: tenta SVG primeiro, cai para faixa sólida se librsvg não disponível
+    // Gera o rodapé como PNG (tenta SVG, fallback para faixa sólida)
     let footerBuf;
     try {
       const footerSvg = buildFooterSvg(width);
-      footerBuf = await sharp(Buffer.from(footerSvg)).resize(width, footerH).png().toBuffer();
+      footerBuf = await sharp(Buffer.from(footerSvg))
+        .resize({ width, height: footerH, fit: 'fill' })
+        .png()
+        .toBuffer();
+      console.log('[Overlay] SVG rodapé renderizado com sucesso');
     } catch (svgErr) {
-      console.warn('[Overlay] SVG render falhou, usando fallback sólido:', svgErr.message);
-      // Fallback: faixa escura sólida sem SVG
+      console.warn('[Overlay] SVG falhou, usando fallback sólido:', svgErr.message);
       footerBuf = await sharp({
         create: { width, height: footerH, channels: 3, background: { r: 17, g: 20, b: 17 } }
       }).png().toBuffer();
     }
 
-    // Estende canvas abaixo da imagem original com fundo escuro opaco (compatível com JPEG)
+    // Estende a canvas abaixo e cola o rodapé na posição correta (top = altura original)
     const result = await sharp(inputBuf)
       .extend({ bottom: footerH, background: { r: 17, g: 20, b: 17 } })
-      .composite([{ input: footerBuf, top: 0, left: 0, gravity: 'south' }])
+      .composite([{ input: footerBuf, top: height, left: 0 }])
       .png()
       .toBuffer();
 
