@@ -724,6 +724,110 @@ body { width:940px; height:1200px; overflow:hidden; background:#1e1e1e; }
 </html>`;
 }
 
+// ─── Template HTML: banner gerado a partir de texto livre ────────────────────
+function buildBannerFromText({ titulo, subtitulo, empresa, tipo, destaques }) {
+  const destaquesArr = Array.isArray(destaques) ? destaques
+    : (typeof destaques === 'string' ? [destaques] : []);
+
+  const destaquesHtml = destaquesArr.slice(0, 4).map(d => `
+    <div class="hl">
+      <span class="hl-dot"></span>
+      <span class="hl-text">${d}</span>
+    </div>`).join('');
+
+  const titleLen = (titulo || '').length;
+  const titleSize = titleLen > 20 ? '60px' : titleLen > 13 ? '76px' : '92px';
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+${FONT_CSS}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { width:940px; height:1200px; overflow:hidden; background:#111411; }
+.card {
+  width:940px; height:1200px;
+  background:linear-gradient(145deg,#1e221e 0%,#161a16 50%,#111411 100%);
+  position:relative; overflow:hidden;
+  display:flex; flex-direction:column;
+  padding:44px 52px 28px 59px;
+}
+.side-bar { position:absolute;top:0;left:0;width:7px;height:100%;background:linear-gradient(180deg,#4ccc3c 0%,#1a8c28 55%,rgba(26,140,40,0) 100%); }
+.bot-bar  { position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,transparent,#3dbe4a 30%,#1a8c28 70%,transparent); }
+.glow-tr  { position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(61,190,60,0.07) 0%,transparent 65%);top:-280px;right:-200px;pointer-events:none; }
+.glow-bl  { position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(76,204,60,0.05) 0%,transparent 70%);bottom:80px;left:-180px;pointer-events:none; }
+.corner   { position:absolute;bottom:60px;right:0;width:280px;height:280px;opacity:0.04; }
+
+.header { display:flex;align-items:center;justify-content:space-between;flex-shrink:0; }
+.logo-svg { width:175px; }
+.tag { background:linear-gradient(135deg,#3dbe4a,#1a7c28);color:#fff;font-family:'Barlow',sans-serif;font-weight:700;font-size:13px;padding:8px 22px;border-radius:100px;letter-spacing:2.5px;text-transform:uppercase;white-space:nowrap; }
+
+.divider { height:1px;background:linear-gradient(90deg,rgba(61,190,74,0.5),rgba(61,190,74,0.1) 60%,transparent);margin:28px 0 24px;flex-shrink:0; }
+
+.empresa { font-family:'Barlow',sans-serif;font-weight:400;font-size:17px;color:rgba(255,255,255,0.38);letter-spacing:4px;text-transform:uppercase;margin-bottom:10px;flex-shrink:0; }
+
+.title { font-family:'Barlow Condensed',sans-serif;font-weight:900;font-size:${titleSize};color:#fff;line-height:0.95;letter-spacing:-2px;text-transform:uppercase;flex-shrink:0; }
+.accent-bar { width:64px;height:5px;background:linear-gradient(90deg,#4ccc3c,#1a8c28);border-radius:10px;margin:20px 0 18px;flex-shrink:0; }
+.subtitle { font-family:'Barlow',sans-serif;font-weight:400;font-size:22px;color:rgba(255,255,255,0.5);line-height:1.4;flex-shrink:0;margin-bottom:8px; }
+
+.highlights { flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px; }
+.hl { display:flex;align-items:flex-start;gap:18px;background:linear-gradient(135deg,rgba(61,190,74,0.1),rgba(26,140,40,0.05));border:1px solid rgba(61,190,74,0.2);border-radius:14px;padding:18px 24px; }
+.hl-dot { width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,#4ccc3c,#1a8c28);flex-shrink:0;margin-top:7px; }
+.hl-text { font-family:'Barlow',sans-serif;font-weight:600;font-size:22px;color:rgba(255,255,255,0.82);line-height:1.35; }
+
+.footer { display:flex;align-items:center;justify-content:space-between;flex-shrink:0;padding-top:20px; }
+.footer-url { font-family:'Barlow',sans-serif;font-weight:400;font-size:15px;color:rgba(255,255,255,0.18);letter-spacing:3px;text-transform:uppercase; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="side-bar"></div><div class="bot-bar"></div>
+  <div class="glow-tr"></div><div class="glow-bl"></div>
+  <svg class="corner" viewBox="0 0 280 280" fill="none">
+    <circle cx="280" cy="280" r="250" stroke="white" stroke-width="2"/>
+    <circle cx="280" cy="280" r="175" stroke="white" stroke-width="1.5"/>
+    <circle cx="280" cy="280" r="100" stroke="white" stroke-width="1"/>
+  </svg>
+  <div class="header">
+    <svg class="logo-svg" viewBox="0 0 320 80" fill="none">
+      <g transform="translate(0,4)">
+        <polygon points="6,66 22,14 40,46 58,14 74,66 64,66 58,36 40,62 22,36 16,66" fill="white"/>
+        <polyline points="20,38 34,56 66,16" fill="none" stroke="url(#g1)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <defs>
+        <linearGradient id="g1" x1="20" y1="38" x2="66" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#7dde4a"/><stop offset="100%" stop-color="#2a9e30"/>
+        </linearGradient>
+      </defs>
+      <text x="90" y="62" font-family="'Barlow',sans-serif" font-weight="800" font-size="52" fill="white" letter-spacing="-1">check</text>
+      <text x="90" y="76" font-family="'Barlow',sans-serif" font-weight="600" font-size="18" fill="url(#g2)" letter-spacing="1">negócios</text>
+      <defs>
+        <linearGradient id="g2" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#7dde4a"/><stop offset="100%" stop-color="#2a9e30"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div class="tag">${tipo || 'Comunicado'}</div>
+  </div>
+  <div class="divider"></div>
+  ${empresa ? `<div class="empresa">${empresa}</div>` : ''}
+  <div class="title">${titulo || ''}</div>
+  <div class="accent-bar"></div>
+  ${subtitulo ? `<div class="subtitle">${subtitulo}</div>` : ''}
+  <div class="highlights">${destaquesHtml}</div>
+  <div class="footer">
+    <div class="footer-url">checknegocios.com.br</div>
+    <svg width="30" height="30" viewBox="0 0 40 40" fill="none" opacity="0.22">
+      <polygon points="3,34 11,8 20,24 29,8 37,34 32,34 29,18 20,32 11,18 8,34" fill="white"/>
+      <polyline points="10,20 17,30 32,10" fill="none" stroke="#4ccc3c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
 // ─── Rota: Interface web ──────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -854,35 +958,20 @@ Responda SOMENTE com JSON válido, sem markdown, sem explicação:
 
     console.log('[LogoFromText] parsed:', parsed);
 
-    // Step 2: gpt-image-1 gera o banner no estilo CN
-    const prompt = [
-      `Vertical marketing story banner (9:16 portrait) for CheckNegócios, Brazilian B2B financial marketplace.`,
-      ``,
-      `STRICT VISUAL IDENTITY:`,
-      `- Background: very dark near-black (#111411) with subtle dark green gradient tint`,
-      `- Left edge: thin vertical bar with green gradient (#4ccc3c to #1a8c28)`,
-      `- Typography: bold white sans-serif, high contrast on dark`,
-      `- Accent color: bright green (#4ccc3c) for badges, highlights, borders`,
-      `- Top-left: "check negócios" brand — "check" in bold white, "negócios" in gradient green, with stylized green checkmark`,
-      `- Overall style: modern premium B2B fintech, clean, professional`,
-      ``,
-      `CONTENT:`,
-      `• Badge pill top-right: "${tipo}"`,
-      empresa ? `• Company name: "${empresa}"` : '',
-      `• Main title (bold white, large): "${titulo}"`,
-      subtitulo ? `• Subtitle: "${subtitulo}"` : '',
-      destaquesStr ? `• Key highlights (green-bordered cards):\n${destaquesStr}` : '',
-      `• Footer: "checknegocios.com.br"`,
-    ].filter(Boolean).join('\n');
-
-    const response = await openai.images.generate({
-      model: 'gpt-image-1',
-      prompt,
-      size: '1024x1536',
-      quality: 'medium',
+    // Step 2: Renderiza HTML/CSS via Puppeteer — tipografia real, pixel-perfect
+    const html = buildBannerFromText(parsed);
+    const browser = await puppeteer.launch({
+      executablePath: CHROMIUM_PATH,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      headless: true,
     });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 940, height: 1200 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const screenshot = await page.screenshot({ type: 'png', fullPage: false });
+    await browser.close();
 
-    res.json({ image: response.data[0].b64_json, parsed });
+    res.json({ image: screenshot.toString('base64'), parsed });
 
   } catch (err) {
     console.error('[LogoFromText]', err);
