@@ -267,6 +267,7 @@ const UI_HTML = `<!DOCTYPE html>
   }
   input[type=text]:focus, textarea:focus, select:focus { border-color: rgba(76,204,60,0.5); }
   textarea { resize: vertical; min-height: 90px; }
+  #textoLivre { min-height: 160px; font-size: 14px; line-height: 1.6; }
   select option { background: #1a1e1a; }
 
   /* Buttons */
@@ -393,6 +394,25 @@ const UI_HTML = `<!DOCTYPE html>
       <hr>
       <img id="previewImg2" src="" alt="Banner gerado">
       <a class="btn btn-dl" id="dl2" download="banner-ia.png">⬇ Baixar PNG</a>
+    </div>
+  </div>
+
+  <!-- ── Cenário 3: Gerar de Texto ── -->
+  <div class="card" style="grid-column: 1 / -1;">
+    <div class="card-title">Gerar de Texto</div>
+    <div class="card-desc">Ctrl+C no texto (mensagem, e-mail, tabela de taxas...) → cola aqui → IA lê, entende e gera o banner no estilo CN.</div>
+
+    <textarea id="textoLivre" placeholder="Cole aqui o texto com as informações do parceiro, convênio, taxas, promoção..."></textarea>
+
+    <button class="btn btn-primary" id="btnLogoText" style="margin-top:12px;">Gerar Banner</button>
+
+    <div class="spinner" id="spin3"><div class="spin"></div> Lendo texto e gerando imagem… (pode levar ~30s)</div>
+    <div class="error-msg" id="err3"></div>
+
+    <div class="preview-area" id="preview3">
+      <hr>
+      <img id="previewImg3" src="" alt="Banner gerado">
+      <a class="btn btn-dl" id="dl3" download="banner-texto.png">⬇ Baixar PNG</a>
     </div>
   </div>
 
@@ -541,12 +561,38 @@ document.getElementById('btnGenerate').addEventListener('click', async () => {
   }
 });
 
+// ── Gerar de Texto ───────────────────────────────────────────────────────────
+document.getElementById('btnLogoText').addEventListener('click', async () => {
+  const texto = document.getElementById('textoLivre').value.trim();
+  if (!texto) { showError('err3', 'Cole algum texto primeiro.'); return; }
+  setLoading('logotext', true);
+  clearError('err3');
+  try {
+    const r = await fetch('/logo-from-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texto })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Erro desconhecido');
+    showPreview('preview3', 'previewImg3', 'dl3', data.image, 'banner-texto.png');
+  } catch(e) {
+    showError('err3', e.message);
+  } finally {
+    setLoading('logotext', false);
+  }
+});
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function setLoading(who, on) {
-  const spinId = who === 'overlay' ? 'spin1' : 'spin2';
-  const btnId  = who === 'overlay' ? 'btnOverlay' : 'btnGenerate';
-  document.getElementById(spinId).classList.toggle('visible', on);
-  document.getElementById(btnId).disabled = on;
+  const ids = {
+    overlay:  { spin: 'spin1', btn: 'btnOverlay' },
+    generate: { spin: 'spin2', btn: 'btnGenerate' },
+    logotext: { spin: 'spin3', btn: 'btnLogoText' },
+  };
+  const { spin, btn } = ids[who];
+  document.getElementById(spin).classList.toggle('visible', on);
+  document.getElementById(btn).disabled = on;
 }
 
 function showPreview(areaId, imgId, dlId, base64, filename) {
@@ -769,6 +815,77 @@ app.post('/generate', async (req, res) => {
 
   } catch (err) {
     console.error('[Generate]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Rota: Gerar banner a partir de texto livre ──────────────────────────────
+app.post('/logo-from-text', async (req, res) => {
+  try {
+    const { texto } = req.body;
+    if (!texto) return res.status(400).json({ error: 'Campo "texto" é obrigatório' });
+
+    // Step 1: GPT-4o extrai dados estruturados do texto
+    const extraction = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'system',
+          content: `Você é um assistente especializado em marketing financeiro brasileiro.
+Leia o texto e extraia informações para criar um banner de marketing.
+Responda SOMENTE com JSON válido, sem markdown, sem explicação:
+{
+  "titulo": "título principal curto e impactante (máx 5 palavras, CAIXA ALTA)",
+  "subtitulo": "frase complementar (máx 10 palavras)",
+  "empresa": "nome do banco ou parceiro",
+  "tipo": "um de: Novo Convênio | Comunicado | Promoção | Novidade | Alerta | Informativo",
+  "destaques": ["ponto chave 1", "ponto chave 2", "ponto chave 3"]
+}`
+        },
+        { role: 'user', content: texto }
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: 400,
+    });
+
+    const parsed = JSON.parse(extraction.choices[0].message.content);
+    const { titulo, subtitulo, empresa, tipo, destaques } = parsed;
+    const destaquesStr = Array.isArray(destaques) ? destaques.map(d => `• ${d}`).join('\n') : String(destaques);
+
+    console.log('[LogoFromText] parsed:', parsed);
+
+    // Step 2: gpt-image-1 gera o banner no estilo CN
+    const prompt = [
+      `Vertical marketing story banner (9:16 portrait) for CheckNegócios, Brazilian B2B financial marketplace.`,
+      ``,
+      `STRICT VISUAL IDENTITY:`,
+      `- Background: very dark near-black (#111411) with subtle dark green gradient tint`,
+      `- Left edge: thin vertical bar with green gradient (#4ccc3c to #1a8c28)`,
+      `- Typography: bold white sans-serif, high contrast on dark`,
+      `- Accent color: bright green (#4ccc3c) for badges, highlights, borders`,
+      `- Top-left: "check negócios" brand — "check" in bold white, "negócios" in gradient green, with stylized green checkmark`,
+      `- Overall style: modern premium B2B fintech, clean, professional`,
+      ``,
+      `CONTENT:`,
+      `• Badge pill top-right: "${tipo}"`,
+      empresa ? `• Company name: "${empresa}"` : '',
+      `• Main title (bold white, large): "${titulo}"`,
+      subtitulo ? `• Subtitle: "${subtitulo}"` : '',
+      destaquesStr ? `• Key highlights (green-bordered cards):\n${destaquesStr}` : '',
+      `• Footer: "checknegocios.com.br"`,
+    ].filter(Boolean).join('\n');
+
+    const response = await openai.images.generate({
+      model: 'gpt-image-1',
+      prompt,
+      size: '1024x1536',
+      quality: 'medium',
+    });
+
+    res.json({ image: response.data[0].b64_json, parsed });
+
+  } catch (err) {
+    console.error('[LogoFromText]', err);
     res.status(500).json({ error: err.message });
   }
 });
