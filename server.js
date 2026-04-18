@@ -78,17 +78,55 @@ app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '20mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Carrega e redimensiona a logo real (logo-cn.png) ────────────────────────
+// ─── Carrega, redimensiona e adapta o logo para o fundo da imagem ────────────
 const LOGO_PATH = path.join(__dirname, 'logo-cn.png');
 
-async function getLogoBuf(targetW) {
+async function getLogoBuf(targetW, bgIsDark = false) {
   if (!fs.existsSync(LOGO_PATH)) {
     throw new Error('logo-cn.png não encontrada — coloque o arquivo na pasta banner-renderer/');
   }
-  return sharp(LOGO_PATH)
+
+  const resized = await sharp(LOGO_PATH)
     .resize({ width: targetW, withoutEnlargement: false })
-    .png()
-    .toBuffer();
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const { data, info } = resized;
+
+  if (bgIsDark) {
+    // Converte pixels escuros (texto preto) para branco, mantém verdes intactos
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+      if (a > 30) {
+        const brightness = (r + g + b) / 3;
+        const isGreen = g > r * 1.3 && g > b * 1.3; // pixel verde
+        if (brightness < 100 && !isGreen) {
+          data[i] = 255; data[i + 1] = 255; data[i + 2] = 255; // preto → branco
+        }
+      }
+    }
+  }
+
+  return sharp(Buffer.from(data), {
+    raw: { width: info.width, height: info.height, channels: 4 }
+  }).png().toBuffer();
+}
+
+// Detecta se a região da imagem onde o logo vai é escura
+async function isRegionDark(inputBuf, left, top, regionW, regionH) {
+  try {
+    const { data } = await sharp(inputBuf)
+      .extract({ left, top, width: regionW, height: regionH })
+      .resize(8, 8)
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    const avg = data.reduce((s, v) => s + v, 0) / data.length;
+    return avg < 140; // < 140 = escuro
+  } catch {
+    return true; // fallback: assume escuro
+  }
 }
 
 // ─── Análise de pixels: avalia os 4 cantos por densidade de bordas ───────────
@@ -213,10 +251,10 @@ const UI_HTML = `<!DOCTYPE html>
   .drag-wrap img.base-img { width: 100%; display: block; border-radius: 12px; pointer-events: none; user-select: none; }
   .drag-logo {
     position: absolute; cursor: grab; user-select: none;
-    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7));
+    filter: drop-shadow(0 0 3px rgba(255,255,255,0.95)) drop-shadow(0 0 3px rgba(255,255,255,0.95));
     transition: filter 0.15s;
   }
-  .drag-logo:active { cursor: grabbing; filter: drop-shadow(0 4px 16px rgba(76,204,60,0.5)); }
+  .drag-logo:active { cursor: grabbing; filter: drop-shadow(0 0 6px #4ccc3c) drop-shadow(0 0 3px rgba(255,255,255,0.9)); }
   .drag-hint { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 10px; }
 
   /* Form */
@@ -664,13 +702,17 @@ app.post('/overlay', async (req, res) => {
 
     // Dimensões do logo (~25% da largura da imagem real)
     const logoW = Math.round(width * 0.25);
-    const logoBuf = await getLogoBuf(logoW);
-    const logoMeta = await sharp(logoBuf).metadata();
+    const logoMeta = await sharp(LOGO_PATH).resize({ width: logoW }).metadata();
     const logoH = logoMeta.height;
 
     const left = Math.min(Math.round(x_pct * width),  width  - logoW - 1);
     const top  = Math.min(Math.round(y_pct * height), height - logoH - 1);
-    console.log(`[Overlay] x=${(x_pct*100).toFixed(1)}% y=${(y_pct*100).toFixed(1)}% → left=${left} top=${top}`);
+
+    // Detecta se o fundo na região do logo é escuro para adaptar as cores
+    const dark = await isRegionDark(inputBuf, left, top, logoW, logoH);
+    console.log(`[Overlay] x=${(x_pct*100).toFixed(1)}% y=${(y_pct*100).toFixed(1)}% dark=${dark}`);
+
+    const logoBuf = await getLogoBuf(logoW, dark);
 
     const result = await sharp(inputBuf)
       .composite([{ input: logoBuf, top, left, blend: 'over' }])
