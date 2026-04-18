@@ -3,7 +3,6 @@ const puppeteer = require('puppeteer-core');
 const http = require('http');
 const fs = require('fs');
 const sharp = require('sharp');
-const multer = require('multer');
 const { OpenAI } = require('openai');
 
 const CHROMIUM_PATH = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
@@ -73,10 +72,8 @@ const FONT_CSS = `
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 const app = express();
-app.use(express.json({ limit: '10mb' }));
-app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '10mb' }));
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+app.use(express.json({ limit: '20mb' }));
+app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '20mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -340,10 +337,14 @@ btnOverlay.addEventListener('click', async () => {
   if (!selectedFile) return;
   setLoading('overlay', true);
   clearError('err1');
-  const fd = new FormData();
-  fd.append('image', selectedFile);
   try {
-    const r = await fetch('/overlay', { method: 'POST', body: fd });
+    // Converte arquivo para base64 no browser antes de enviar como JSON
+    const base64 = await fileToBase64(selectedFile);
+    const r = await fetch('/overlay', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: base64, mimeType: selectedFile.type }),
+    });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Erro desconhecido');
     showPreview('preview1', 'previewImg1', 'dl1', data.image, 'banner-cn.png');
@@ -353,6 +354,15 @@ btnOverlay.addEventListener('click', async () => {
     setLoading('overlay', false);
   }
 });
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]); // remove data URI prefix
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 // ── Generate ─────────────────────────────────────────────────────────────────
 document.getElementById('btnGenerate').addEventListener('click', async () => {
@@ -527,11 +537,13 @@ app.get('/', (req, res) => {
 });
 
 // ─── Rota: Overlay de logo CN no rodapé ──────────────────────────────────────
-app.post('/overlay', upload.single('image'), async (req, res) => {
+// Aceita JSON: { image: "<base64>", mimeType: "image/jpeg" }
+app.post('/overlay', async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: 'Campo "image" é obrigatório' });
+    const { image } = req.body;
+    if (!image) return res.status(400).json({ error: 'Campo "image" (base64) é obrigatório' });
 
-    const inputBuf = req.file.buffer;
+    const inputBuf = Buffer.from(image, 'base64');
     const meta = await sharp(inputBuf).metadata();
     const { width } = meta;
     console.log(`[Overlay] ${width}px wide, format=${meta.format}`);
