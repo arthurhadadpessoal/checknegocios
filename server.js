@@ -91,37 +91,31 @@ async function getLogoBuf(targetW) {
     .toBuffer();
 }
 
-// ─── GPT-4o Vision: decide estratégia de posicionamento do logo ──────────────
-// Estratégia "place": posiciona nas coordenadas x%/y% de espaço vazio
-// Estratégia "footer": imagem muito cheia → adiciona faixa de rodapé escura
+// ─── GPT-4o Vision: encontra o melhor canto interno para o logo ──────────────
 async function findLogoPlacement(base64, mimeType, imgW, imgH) {
+  const logoW = Math.round(imgW * 0.22);
+  const logoH = Math.round(logoW / 2.8);
+
   const resp = await openai.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 200,
+    max_tokens: 150,
     messages: [{
       role: 'user',
       content: [
         {
           type: 'text',
-          text: `This is a marketing image (${imgW}x${imgH}px). I need to add a "CheckNegócios" brand logo to it.
+          text: `Marketing image ${imgW}x${imgH}px. I need to overlay a "CheckNegócios" logo (${logoW}x${logoH}px) INSIDE the image.
 
-The logo rectangle is: ${Math.round(imgW * 0.30)}px wide × ${Math.round(imgW * 0.30 / 2.8)}px tall.
+Scan the four corners and edges of the image. Find the position where the logo will cover the LEAST amount of text, faces, or important graphics. Every image has at least one area with less content than others — pick the best one.
 
-DEFAULT STRATEGY IS "footer" — only override to "place" if ALL conditions below are met:
-1. There is a region with ZERO text, ZERO faces, ZERO important graphic elements
-2. The region is clearly larger than the logo dimensions above
-3. You are 100% confident the logo will NOT touch any text or meaningful content
+The logo will have a subtle dark semi-transparent background, so it can go over slightly textured or colored areas — just avoid covering text or faces directly.
 
-If there is any doubt → use "footer".
+Reply ONLY with valid JSON:
+{"x_pct": 3, "y_pct": 82, "reason": "bottom-left corner has less text than other areas"}
 
-STRATEGY A — "place": place the logo at exact pixel coordinates within the image.
-STRATEGY B — "footer": we will add a dark strip below the image (safe, never covers content).
-
-Reply with ONLY valid JSON, no markdown:
-If A: {"strategy": "place", "x_pct": 5, "y_pct": 85, "reason": "..."}
-If B: {"strategy": "footer", "reason": "..."}
-
-x_pct: 0–70, y_pct: 0–88`,
+- x_pct: 0–78 (logo left edge as % of image width)
+- y_pct: 0–88 (logo top edge as % of image height)
+- Always return coordinates — never refuse`,
         },
         {
           type: 'image_url',
@@ -134,18 +128,13 @@ x_pct: 0–70, y_pct: 0–88`,
   try {
     const text = resp.choices[0].message.content.trim();
     const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-    console.log(`[Overlay] estratégia=${json.strategy} — ${json.reason}`);
-    if (json.strategy === 'place') {
-      return {
-        strategy: 'place',
-        x_pct: Math.min(Math.max(Number(json.x_pct) || 4, 0), 70),
-        y_pct: Math.min(Math.max(Number(json.y_pct) || 85, 0), 88),
-      };
-    }
-    return { strategy: 'footer' };
+    const x = Math.min(Math.max(Number(json.x_pct) || 3, 0), 78);
+    const y = Math.min(Math.max(Number(json.y_pct) || 82, 0), 88);
+    console.log(`[Overlay] posição: x=${x}% y=${y}% — ${json.reason}`);
+    return { x_pct: x, y_pct: y };
   } catch (e) {
-    console.warn('[Overlay] Falha ao parsear resposta da IA:', e.message, '— usando footer');
-    return { strategy: 'footer' };
+    console.warn('[Overlay] Falha ao parsear posição:', e.message, '— usando bottom-left padrão');
+    return { x_pct: 3, y_pct: 82 };
   }
 }
 
@@ -575,37 +564,35 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // IA decide a estratégia: "place" (espaço vazio) ou "footer" (faixa de rodapé)
+    // IA encontra o melhor canto interno para o logo
     const mimeType = req.body.mimeType || 'image/jpeg';
-    const placement = await findLogoPlacement(image, mimeType, width, height);
+    const { x_pct, y_pct } = await findLogoPlacement(image, mimeType, width, height);
 
-    // Dimensões do logo (~30% da largura)
-    const logoW = Math.round(width * 0.30);
+    // Dimensões do logo (~22% da largura — discreto mas visível)
+    const logoW = Math.round(width * 0.22);
     const logoBuf = await getLogoBuf(logoW);
     const logoMeta = await sharp(logoBuf).metadata();
     const logoH = logoMeta.height;
 
-    let result;
+    const left = Math.round((x_pct / 100) * width);
+    const top  = Math.round((y_pct / 100) * height);
 
-    if (placement.strategy === 'place') {
-      // Coloca o logo nas coordenadas escolhidas pela IA
-      const left = Math.round((placement.x_pct / 100) * width);
-      const top  = Math.round((placement.y_pct / 100) * height);
-      result = await sharp(inputBuf)
-        .composite([{ input: logoBuf, top, left, blend: 'over' }])
-        .png()
-        .toBuffer();
-    } else {
-      // Adiciona faixa de rodapé escura abaixo da imagem e coloca o logo centralizado à esquerda
-      const stripH = Math.round(logoH * 1.5);
-      const logoTop  = Math.round((stripH - logoH) / 2);
-      const logoLeft = Math.round(width * 0.04);
-      result = await sharp(inputBuf)
-        .extend({ bottom: stripH, background: { r: 17, g: 20, b: 17 } })
-        .composite([{ input: logoBuf, top: height + logoTop, left: logoLeft, blend: 'over' }])
-        .png()
-        .toBuffer();
-    }
+    // Cria fundo escuro semi-transparente atrás do logo para legibilidade universal
+    const pad = Math.round(logoW * 0.06);
+    const bgW = logoW + pad * 2;
+    const bgH = logoH + pad * 2;
+    const bgBuf = await sharp({
+      create: { width: bgW, height: bgH, channels: 4, background: { r: 10, g: 13, b: 10, alpha: 180 } }
+    }).png().toBuffer();
+
+    // Compõe: primeiro o fundo, depois o logo centrado sobre ele
+    const result = await sharp(inputBuf)
+      .composite([
+        { input: bgBuf,  top: Math.max(0, top - pad), left: Math.max(0, left - pad), blend: 'over' },
+        { input: logoBuf, top, left, blend: 'over' },
+      ])
+      .png()
+      .toBuffer();
 
     const base64 = result.toString('base64');
     res.json({ image: base64 });
