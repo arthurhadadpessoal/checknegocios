@@ -91,51 +91,70 @@ async function getLogoBuf(targetW) {
     .toBuffer();
 }
 
-// ─── GPT-4o Vision: encontra o melhor canto interno para o logo ──────────────
-async function findLogoPlacement(base64, mimeType, imgW, imgH) {
-  const logoW = Math.round(imgW * 0.22);
-  const logoH = Math.round(logoW / 2.8);
+// ─── Análise de pixels: encontra a região mais uniforme para o logo ──────────
+// Divide a imagem em grade, calcula variância de cor por célula.
+// Menor variância = fundo mais uniforme = melhor lugar para o logo.
+async function findLogoPlacement(inputBuf, imgW, imgH, logoPctW = 22, logoPctH = 10) {
+  // Trabalha numa miniatura para velocidade
+  const thumbW = 80;
+  const thumbH = Math.round(imgH * thumbW / imgW);
 
-  const resp = await openai.chat.completions.create({
-    model: 'gpt-4o',
-    max_tokens: 150,
-    messages: [{
-      role: 'user',
-      content: [
-        {
-          type: 'text',
-          text: `Marketing image ${imgW}x${imgH}px. I need to overlay a "CheckNegócios" logo (${logoW}x${logoH}px) INSIDE the image.
+  const { data } = await sharp(inputBuf)
+    .resize(thumbW, thumbH)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
 
-Scan the four corners and edges of the image. Find the position where the logo will cover the LEAST amount of text, faces, or important graphics. Every image has at least one area with less content than others — pick the best one.
+  // Tamanho da janela do logo na miniatura
+  const winW = Math.round(logoPctW * thumbW / 100);
+  const winH = Math.round(logoPctH * thumbH / 100);
 
-The logo will have a subtle dark semi-transparent background, so it can go over slightly textured or colored areas — just avoid covering text or faces directly.
+  // Candidatos: grade 5×5 dentro dos limites possíveis
+  const maxLeft = thumbW - winW;
+  const maxTop  = thumbH - winH;
+  const steps = 5;
 
-Reply ONLY with valid JSON:
-{"x_pct": 3, "y_pct": 82, "reason": "bottom-left corner has less text than other areas"}
+  let bestVariance = Infinity;
+  let bestX = 0, bestY = Math.round(maxTop * 0.85); // fallback: quase no fundo
 
-- x_pct: 0–78 (logo left edge as % of image width)
-- y_pct: 0–88 (logo top edge as % of image height)
-- Always return coordinates — never refuse`,
-        },
-        {
-          type: 'image_url',
-          image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${base64}`, detail: 'high' },
-        },
-      ],
-    }],
-  });
+  for (let gy = 0; gy < steps; gy++) {
+    for (let gx = 0; gx < steps; gx++) {
+      const sx = Math.round(gx * maxLeft / (steps - 1));
+      const sy = Math.round(gy * maxTop  / (steps - 1));
 
-  try {
-    const text = resp.choices[0].message.content.trim();
-    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-    const x = Math.min(Math.max(Number(json.x_pct) || 3, 0), 78);
-    const y = Math.min(Math.max(Number(json.y_pct) || 82, 0), 88);
-    console.log(`[Overlay] posição: x=${x}% y=${y}% — ${json.reason}`);
-    return { x_pct: x, y_pct: y };
-  } catch (e) {
-    console.warn('[Overlay] Falha ao parsear posição:', e.message, '— usando bottom-left padrão');
-    return { x_pct: 3, y_pct: 82 };
+      // Soma e soma-quadrado para variância em passagem única
+      let rSum = 0, gSum = 0, bSum = 0;
+      let rSq  = 0, gSq  = 0, bSq  = 0;
+      let n = 0;
+
+      for (let py = sy; py < sy + winH; py++) {
+        for (let px = sx; px < sx + winW; px++) {
+          const i = (py * thumbW + px) * 3;
+          const r = data[i], g = data[i + 1], b = data[i + 2];
+          rSum += r; gSum += g; bSum += b;
+          rSq  += r * r; gSq  += g * g; bSq  += b * b;
+          n++;
+        }
+      }
+
+      const variance =
+        (rSq / n - (rSum / n) ** 2) +
+        (gSq / n - (gSum / n) ** 2) +
+        (bSq / n - (bSum / n) ** 2);
+
+      if (variance < bestVariance) {
+        bestVariance = variance;
+        bestX = sx;
+        bestY = sy;
+      }
+    }
   }
+
+  // Converte coordenadas da miniatura de volta para a imagem original
+  const x_pct = Math.round(bestX * 100 / thumbW);
+  const y_pct = Math.round(bestY * 100 / thumbH);
+  console.log(`[Overlay] melhor posição: x=${x_pct}% y=${y_pct}% variância=${bestVariance.toFixed(0)}`);
+  return { x_pct, y_pct };
 }
 
 // ─── HTML da interface web ────────────────────────────────────────────────────
@@ -564,9 +583,8 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // IA encontra o melhor canto interno para o logo
-    const mimeType = req.body.mimeType || 'image/jpeg';
-    const { x_pct, y_pct } = await findLogoPlacement(image, mimeType, width, height);
+    // Análise de pixels: encontra a região mais uniforme dentro da imagem
+    const { x_pct, y_pct } = await findLogoPlacement(inputBuf, width, height);
 
     // Dimensões do logo (~22% da largura — discreto mas visível)
     const logoW = Math.round(width * 0.22);
