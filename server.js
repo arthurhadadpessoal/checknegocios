@@ -207,19 +207,17 @@ const UI_HTML = `<!DOCTYPE html>
   .drop-text strong { color: var(--white); }
   .file-name { margin-top: 8px; font-size: 13px; color: var(--green); font-weight: 600; }
 
-  /* Position picker */
-  .pos-picker { position: relative; display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
-  .pos-picker.visible { display: block; }
-  .pos-picker img { width: 100%; display: block; border-radius: 12px; }
-  .pos-overlay { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; padding: 10px; gap: 0; }
-  .pos-btn {
-    background: rgba(76,204,60,0.15); border: 2px solid rgba(76,204,60,0.4); border-radius: 8px;
-    color: rgba(255,255,255,0.7); font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    cursor: pointer; transition: background 0.15s, border-color 0.15s; margin: 6px;
-    display: flex; align-items: center; justify-content: center;
+  /* Drag canvas */
+  .drag-wrap { position: relative; display: none; margin-bottom: 16px; border-radius: 12px; overflow: hidden; touch-action: none; }
+  .drag-wrap.visible { display: block; }
+  .drag-wrap img.base-img { width: 100%; display: block; border-radius: 12px; pointer-events: none; user-select: none; }
+  .drag-logo {
+    position: absolute; cursor: grab; user-select: none;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.7));
+    transition: filter 0.15s;
   }
-  .pos-btn:hover, .pos-btn.active { background: rgba(76,204,60,0.55); border-color: #4ccc3c; color: white; }
-  .pos-label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 10px; }
+  .drag-logo:active { cursor: grabbing; filter: drop-shadow(0 4px 16px rgba(76,204,60,0.5)); }
+  .drag-hint { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 10px; }
 
   /* Form */
   .field { margin-bottom: 16px; }
@@ -296,17 +294,12 @@ const UI_HTML = `<!DOCTYPE html>
       <div class="file-name" id="fileName1"></div>
     </div>
 
-    <!-- Preview da imagem com seletor de posição nos cantos -->
-    <div class="pos-picker" id="posPicker">
-      <img id="posPreviewImg" src="" alt="">
-      <div class="pos-overlay">
-        <button class="pos-btn" data-pos="top_left">↖ AQUI</button>
-        <button class="pos-btn" data-pos="top_right">↗ AQUI</button>
-        <button class="pos-btn" data-pos="bottom_left">↙ AQUI</button>
-        <button class="pos-btn" data-pos="bottom_right">↘ AQUI</button>
-      </div>
+    <!-- Preview com logo arrastável -->
+    <div class="drag-wrap" id="dragWrap">
+      <img class="base-img" id="baseImg" src="" alt="">
+      <img class="drag-logo" id="dragLogo" src="/logo-preview" alt="logo CN" draggable="false">
     </div>
-    <div class="pos-label" id="posLabel" style="display:none">Clique no canto onde quer o logo</div>
+    <div class="drag-hint" id="dragHint" style="display:none">🖱 Arraste o logo para a posição desejada</div>
 
     <button class="btn btn-primary" id="btnOverlay" disabled>Aplicar Logo CN</button>
 
@@ -368,42 +361,77 @@ const UI_HTML = `<!DOCTYPE html>
 </main>
 
 <script>
-// ── Overlay ──────────────────────────────────────────────────────────────────
-const fileInput      = document.getElementById('fileInput');
-const dropZone1      = document.getElementById('dropZone1');
-const fileName1      = document.getElementById('fileName1');
-const btnOverlay     = document.getElementById('btnOverlay');
-const posPicker      = document.getElementById('posPicker');
-const posPreviewImg  = document.getElementById('posPreviewImg');
-const posLabel       = document.getElementById('posLabel');
+// ── Overlay com drag-and-drop ─────────────────────────────────────────────────
+const fileInput  = document.getElementById('fileInput');
+const dropZone1  = document.getElementById('dropZone1');
+const fileName1  = document.getElementById('fileName1');
+const btnOverlay = document.getElementById('btnOverlay');
+const dragWrap   = document.getElementById('dragWrap');
+const baseImg    = document.getElementById('baseImg');
+const dragLogo   = document.getElementById('dragLogo');
+const dragHint   = document.getElementById('dragHint');
 
 let selectedFile = null;
-let selectedPos  = 'bottom_left'; // padrão
+let logoX = 0, logoY = 0; // posição do logo na imagem exibida (px)
 
 function setFile(file) {
   if (!file || !file.type.startsWith('image/')) return;
   selectedFile = file;
   fileName1.textContent = file.name;
-
-  // Mostra preview inline para o usuário escolher o canto
   const reader = new FileReader();
   reader.onload = e => {
-    posPreviewImg.src = e.target.result;
-    posPicker.classList.add('visible');
-    posLabel.style.display = 'block';
-    // Seleciona bottom_left por padrão
-    selectPos('bottom_left');
+    baseImg.src = e.target.result;
+    baseImg.onload = () => {
+      dragWrap.classList.add('visible');
+      dragHint.style.display = 'block';
+      btnOverlay.disabled = false;
+      // Posição inicial: canto inferior esquerdo
+      const w = dragWrap.offsetWidth;
+      const h = dragWrap.offsetHeight;
+      const lw = Math.round(w * 0.28);
+      dragLogo.style.width = lw + 'px';
+      logoX = Math.round(w * 0.03);
+      logoY = Math.round(h * 0.85) - dragLogo.offsetHeight;
+      moveLogo(logoX, logoY);
+    };
   };
   reader.readAsDataURL(file);
 }
 
-function selectPos(pos) {
-  selectedPos = pos;
-  document.querySelectorAll('.pos-btn').forEach(b => b.classList.toggle('active', b.dataset.pos === pos));
-  btnOverlay.disabled = false;
+function moveLogo(x, y) {
+  const w = dragWrap.offsetWidth;
+  const h = dragWrap.offsetHeight;
+  const lw = dragLogo.offsetWidth || Math.round(w * 0.28);
+  const lh = dragLogo.offsetHeight || Math.round(lw / 2.8);
+  logoX = Math.max(0, Math.min(x, w - lw));
+  logoY = Math.max(0, Math.min(y, h - lh));
+  dragLogo.style.left = logoX + 'px';
+  dragLogo.style.top  = logoY + 'px';
 }
 
-document.querySelectorAll('.pos-btn').forEach(b => b.addEventListener('click', () => selectPos(b.dataset.pos)));
+// Mouse drag
+let dragging = false, ox = 0, oy = 0;
+dragLogo.addEventListener('mousedown', e => {
+  dragging = true;
+  ox = e.clientX - logoX;
+  oy = e.clientY - logoY;
+  e.preventDefault();
+});
+document.addEventListener('mousemove', e => { if (dragging) moveLogo(e.clientX - ox, e.clientY - oy); });
+document.addEventListener('mouseup',   () => { dragging = false; });
+
+// Touch drag
+dragLogo.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  ox = t.clientX - logoX;
+  oy = t.clientY - logoY;
+  e.preventDefault();
+}, { passive: false });
+dragLogo.addEventListener('touchmove', e => {
+  const t = e.touches[0];
+  moveLogo(t.clientX - ox, t.clientY - oy);
+  e.preventDefault();
+}, { passive: false });
 
 fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
 dropZone1.addEventListener('dragover', e => { e.preventDefault(); dropZone1.classList.add('drag-over'); });
@@ -415,11 +443,17 @@ btnOverlay.addEventListener('click', async () => {
   setLoading('overlay', true);
   clearError('err1');
   try {
+    // Converte posição da preview (CSS px) para % da imagem real
+    const dispW = dragWrap.offsetWidth;
+    const dispH = dragWrap.offsetHeight;
+    const x_pct = logoX / dispW;
+    const y_pct = logoY / dispH;
+
     const base64 = await fileToBase64(selectedFile);
     const r = await fetch('/overlay', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: base64, mimeType: selectedFile.type, position: selectedPos }),
+      body: JSON.stringify({ image: base64, mimeType: selectedFile.type, x_pct, y_pct }),
     });
     const data = await r.json();
     if (!r.ok) throw new Error(data.error || 'Erro desconhecido');
@@ -624,24 +658,19 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // Posição escolhida pelo usuário via UI
-    const position = req.body.position || 'bottom_left';
+    // Coordenadas em fração (0–1) vindas do drag na UI
+    const x_pct = Math.min(Math.max(Number(req.body.x_pct) || 0.03, 0), 0.95);
+    const y_pct = Math.min(Math.max(Number(req.body.y_pct) || 0.82, 0), 0.95);
 
-    // Dimensões do logo (~25% da largura)
+    // Dimensões do logo (~25% da largura da imagem real)
     const logoW = Math.round(width * 0.25);
     const logoBuf = await getLogoBuf(logoW);
     const logoMeta = await sharp(logoBuf).metadata();
     const logoH = logoMeta.height;
-    const margin = Math.round(width * 0.03);
 
-    const posMap = {
-      top_left:     { top: margin,                   left: margin },
-      top_right:    { top: margin,                   left: width - logoW - margin },
-      bottom_left:  { top: height - logoH - margin,  left: margin },
-      bottom_right: { top: height - logoH - margin,  left: width - logoW - margin },
-    };
-    const { top, left } = posMap[position] || posMap['bottom_left'];
-    console.log(`[Overlay] position=${position} top=${top} left=${left} logo=${logoW}x${logoH}`);
+    const left = Math.min(Math.round(x_pct * width),  width  - logoW - 1);
+    const top  = Math.min(Math.round(y_pct * height), height - logoH - 1);
+    console.log(`[Overlay] x=${(x_pct*100).toFixed(1)}% y=${(y_pct*100).toFixed(1)}% → left=${left} top=${top}`);
 
     const result = await sharp(inputBuf)
       .composite([{ input: logoBuf, top, left, blend: 'over' }])
@@ -737,6 +766,16 @@ app.post('/render', async (req, res) => {
 });
 
 // ─── Health check ─────────────────────────────────────────────────────────────
+// Serve o logo CN para preview no drag (redimensionado para 200px)
+app.get('/logo-preview', async (req, res) => {
+  try {
+    const buf = await sharp(LOGO_PATH).resize({ width: 200 }).png().toBuffer();
+    res.set('Content-Type', 'image/png').send(buf);
+  } catch (e) {
+    res.status(500).send('Logo não encontrada');
+  }
+});
+
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
 
 // ─── Error handler global (captura erros do multer e outros middlewares) ───────
