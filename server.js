@@ -534,15 +534,27 @@ app.post('/overlay', upload.single('image'), async (req, res) => {
     const inputBuf = req.file.buffer;
     const meta = await sharp(inputBuf).metadata();
     const { width } = meta;
+    console.log(`[Overlay] ${width}px wide, format=${meta.format}`);
 
     const footerH = Math.max(90, Math.round(width * 0.085));
-    const footerSvg = buildFooterSvg(width, footerH);
-    const footerBuf = await sharp(Buffer.from(footerSvg)).png().toBuffer();
 
-    // Estende a canvas abaixo da imagem original e cola o rodapé
+    // Gera o rodapé: tenta SVG primeiro, cai para faixa sólida se librsvg não disponível
+    let footerBuf;
+    try {
+      const footerSvg = buildFooterSvg(width);
+      footerBuf = await sharp(Buffer.from(footerSvg)).resize(width, footerH).png().toBuffer();
+    } catch (svgErr) {
+      console.warn('[Overlay] SVG render falhou, usando fallback sólido:', svgErr.message);
+      // Fallback: faixa escura sólida sem SVG
+      footerBuf = await sharp({
+        create: { width, height: footerH, channels: 3, background: { r: 17, g: 20, b: 17 } }
+      }).png().toBuffer();
+    }
+
+    // Estende canvas abaixo da imagem original com fundo escuro opaco (compatível com JPEG)
     const result = await sharp(inputBuf)
-      .extend({ bottom: footerH, background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .composite([{ input: footerBuf, gravity: 'south' }])
+      .extend({ bottom: footerH, background: { r: 17, g: 20, b: 17 } })
+      .composite([{ input: footerBuf, top: 0, left: 0, gravity: 'south' }])
       .png()
       .toBuffer();
 
@@ -636,6 +648,13 @@ app.post('/render', async (req, res) => {
 
 // ─── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (_, res) => res.json({ status: 'ok' }));
+
+// ─── Error handler global (captura erros do multer e outros middlewares) ───────
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('[Error]', err.message || err);
+  res.status(err.status || 500).json({ error: err.message || 'Erro interno' });
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Marketing Studio rodando na porta ${PORT}`));
