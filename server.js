@@ -91,12 +91,11 @@ async function getLogoBuf(targetW) {
     .toBuffer();
 }
 
-// ─── Análise de pixels: encontra a região mais uniforme para o logo ──────────
-// Divide a imagem em grade, calcula variância de cor por célula.
-// Menor variância = fundo mais uniforme = melhor lugar para o logo.
-async function findLogoPlacement(inputBuf, imgW, imgH, logoPctW = 22, logoPctH = 10) {
-  // Trabalha numa miniatura para velocidade
-  const thumbW = 80;
+// ─── Análise de pixels: avalia os 4 cantos por densidade de bordas ───────────
+// Texto e logos criam muitas transições de pixel (bordas).
+// Fundo vazio tem poucas bordas. Menor score = melhor canto para o logo.
+async function findLogoPlacement(inputBuf, imgW, imgH) {
+  const thumbW = 100;
   const thumbH = Math.round(imgH * thumbW / imgW);
 
   const { data } = await sharp(inputBuf)
@@ -105,55 +104,55 @@ async function findLogoPlacement(inputBuf, imgW, imgH, logoPctW = 22, logoPctH =
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  // Tamanho da janela do logo na miniatura
-  const winW = Math.round(logoPctW * thumbW / 100);
-  const winH = Math.round(logoPctH * thumbH / 100);
+  const winW = Math.round(22 * thumbW / 100); // logo ocupa ~22% da largura
+  const winH = Math.round(10 * thumbH / 100); // logo ocupa ~10% da altura
+  const m = 2; // margem da borda em pixels
 
-  // Candidatos: grade 5×5 dentro dos limites possíveis
-  const maxLeft = thumbW - winW;
-  const maxTop  = thumbH - winH;
-  const steps = 5;
+  const corners = [
+    { name: 'top_left',     sx: m,                   sy: m,                    bottomBonus: false },
+    { name: 'top_right',    sx: thumbW - winW - m,   sy: m,                    bottomBonus: false },
+    { name: 'bottom_left',  sx: m,                   sy: thumbH - winH - m,    bottomBonus: true  },
+    { name: 'bottom_right', sx: thumbW - winW - m,   sy: thumbH - winH - m,    bottomBonus: true  },
+  ];
 
-  let bestVariance = Infinity;
-  let bestX = 0, bestY = Math.round(maxTop * 0.85); // fallback: quase no fundo
+  let bestScore = Infinity;
+  let best = corners[2]; // fallback: bottom_left
 
-  for (let gy = 0; gy < steps; gy++) {
-    for (let gx = 0; gx < steps; gx++) {
-      const sx = Math.round(gx * maxLeft / (steps - 1));
-      const sy = Math.round(gy * maxTop  / (steps - 1));
+  for (const corner of corners) {
+    const { sx, sy } = corner;
+    let edges = 0, n = 0;
 
-      // Soma e soma-quadrado para variância em passagem única
-      let rSum = 0, gSum = 0, bSum = 0;
-      let rSq  = 0, gSq  = 0, bSq  = 0;
-      let n = 0;
-
-      for (let py = sy; py < sy + winH; py++) {
-        for (let px = sx; px < sx + winW; px++) {
-          const i = (py * thumbW + px) * 3;
-          const r = data[i], g = data[i + 1], b = data[i + 2];
-          rSum += r; gSum += g; bSum += b;
-          rSq  += r * r; gSq  += g * g; bSq  += b * b;
-          n++;
-        }
+    for (let py = sy; py < Math.min(sy + winH, thumbH - 1); py++) {
+      for (let px = sx; px < Math.min(sx + winW, thumbW - 1); px++) {
+        const i = (py * thumbW + px) * 3;
+        // Diferença horizontal
+        const dh = Math.abs(data[i]   - data[i+3]) +
+                   Math.abs(data[i+1] - data[i+4]) +
+                   Math.abs(data[i+2] - data[i+5]);
+        // Diferença vertical
+        const dv = Math.abs(data[i]   - data[i + thumbW*3]) +
+                   Math.abs(data[i+1] - data[i + thumbW*3+1]) +
+                   Math.abs(data[i+2] - data[i + thumbW*3+2]);
+        if (dh > 25) edges++;
+        if (dv > 25) edges++;
+        n++;
       }
+    }
 
-      const variance =
-        (rSq / n - (rSum / n) ** 2) +
-        (gSq / n - (gSum / n) ** 2) +
-        (bSq / n - (bSum / n) ** 2);
+    const edgeDensity = edges / (n * 2); // 0–1, quanto maior = mais conteúdo
+    // Cantos inferiores recebem bônus (×0.75) pois logos naturalmente ficam embaixo
+    const score = edgeDensity * (corner.bottomBonus ? 0.75 : 1.0);
+    console.log(`[Overlay] ${corner.name}: edges=${(edgeDensity*100).toFixed(1)}% score=${score.toFixed(3)}`);
 
-      if (variance < bestVariance) {
-        bestVariance = variance;
-        bestX = sx;
-        bestY = sy;
-      }
+    if (score < bestScore) {
+      bestScore = score;
+      best = corner;
     }
   }
 
-  // Converte coordenadas da miniatura de volta para a imagem original
-  const x_pct = Math.round(bestX * 100 / thumbW);
-  const y_pct = Math.round(bestY * 100 / thumbH);
-  console.log(`[Overlay] melhor posição: x=${x_pct}% y=${y_pct}% variância=${bestVariance.toFixed(0)}`);
+  const x_pct = Math.round(best.sx * 100 / thumbW);
+  const y_pct = Math.round(best.sy * 100 / thumbH);
+  console.log(`[Overlay] escolheu ${best.name}: x=${x_pct}% y=${y_pct}%`);
   return { x_pct, y_pct };
 }
 
