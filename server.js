@@ -2,6 +2,7 @@ const express = require('express');
 const puppeteer = require('puppeteer-core');
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const sharp = require('sharp');
 const { OpenAI } = require('openai');
 
@@ -77,39 +78,17 @@ app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '20mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Logo CN transparente (sem caixa) — para sobreposição direta na imagem ────
-// w = largura desejada em px. Altura é proporcional (~1:2.8).
-function buildLogoPng(w) {
-  const h = Math.round(w / 2.8);
-  const iconSize = Math.round(h * 0.75);
-  const iconX = 0;
-  const iconY = Math.round((h - iconSize) / 2);
-  const gap = Math.round(w * 0.04);
-  const textX = iconSize + gap;
-  const fs1 = Math.round(h * 0.42);
-  const fs2 = Math.round(h * 0.24);
-  const textY1 = Math.round(h * 0.50);
-  const textY2 = Math.round(h * 0.80);
+// ─── Carrega e redimensiona a logo real (logo-cn.png) ────────────────────────
+const LOGO_PATH = path.join(__dirname, 'logo-cn.png');
 
-  // Fundo semi-transparente apenas sob o texto para legibilidade em qualquer bg
-  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="cg" x1="${iconX}" y1="0" x2="${iconSize}" y2="0" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#7dde4a"/><stop offset="100%" stop-color="#2a9e30"/>
-    </linearGradient>
-  </defs>
-  <!-- Sombra suave atrás do logo inteiro para funcionar em fundos claros ou escuros -->
-  <rect x="0" y="0" width="${w}" height="${h}" rx="${Math.round(h * 0.12)}" fill="black" opacity="0.35"/>
-  <!-- Ícone M + checkmark -->
-  <g transform="translate(${iconX + Math.round(h * 0.08)}, ${iconY}) scale(${iconSize / 70})">
-    <polygon points="4,60 18,10 34,36 50,10 64,60 56,60 50,30 34,56 18,30 12,60" fill="white"/>
-    <polyline points="16,32 27,46 54,14" fill="none" stroke="url(#cg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  </g>
-  <!-- check -->
-  <text x="${textX}" y="${textY1}" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="${fs1}" fill="white">check</text>
-  <!-- negócios -->
-  <text x="${textX}" y="${textY2}" font-family="Arial,Helvetica,sans-serif" font-size="${fs2}" fill="#4ccc3c" letter-spacing="1">negócios</text>
-</svg>`;
+async function getLogoBuf(targetW) {
+  if (!fs.existsSync(LOGO_PATH)) {
+    throw new Error('logo-cn.png não encontrada — coloque o arquivo na pasta banner-renderer/');
+  }
+  return sharp(LOGO_PATH)
+    .resize({ width: targetW, withoutEnlargement: false })
+    .png()
+    .toBuffer();
 }
 
 // ─── GPT-4o Vision: encontra região com espaço vazio/escuro para o logo ───────
@@ -598,17 +577,8 @@ app.post('/overlay', async (req, res) => {
     const left = Math.round((x_pct / 100) * width);
     const top  = Math.round((y_pct / 100) * height);
 
-    // Gera o logo como PNG com fundo semi-transparente
-    let logoBuf;
-    try {
-      const logoSvg = buildLogoPng(logoW);
-      logoBuf = await sharp(Buffer.from(logoSvg)).png().toBuffer();
-    } catch (svgErr) {
-      console.warn('[Overlay] SVG logo falhou:', svgErr.message);
-      logoBuf = await sharp({
-        create: { width: logoW, height: logoH, channels: 4, background: { r: 15, g: 18, b: 15, alpha: 200 } }
-      }).png().toBuffer();
-    }
+    // Carrega e redimensiona a logo real (logo-cn.png transparente)
+    const logoBuf = await getLogoBuf(logoW);
 
     // Compõe o logo sobre a imagem original sem alterar o canvas
     const result = await sharp(inputBuf)

@@ -17,6 +17,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 
 COPY server.js ./
+COPY logo-cn.png ./
 
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV CHROMIUM_PATH=/usr/bin/chromium
