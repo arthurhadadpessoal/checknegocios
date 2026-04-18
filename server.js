@@ -109,9 +109,9 @@ The logo is horizontal (roughly 30% of image width, ~10% of image height).
 
 Analyze the image carefully and choose ONE of two strategies:
 
-STRATEGY A — "place": There is a clearly visible empty/dark region (no text, no face, no important graphic) large enough for the logo. Return the top-left corner of that region as percentages.
+STRATEGY A — "place": There is a visible region (no text, no face, no important graphic) large enough for the logo. It can be any solid or uniform color — dark, blue, white, gradient — as long as it is visually clean and the logo will be readable there. Return the top-left corner of that region as percentages.
 
-STRATEGY B — "footer": The image is too busy or packed with content in all areas. We will add a dark footer strip below the image and place the logo there.
+STRATEGY B — "footer": The image is genuinely packed with content everywhere — every region has text, faces, or important graphics that the logo would cover. Only use this if there is truly no clean space anywhere.
 
 Reply with ONLY valid JSON, no markdown:
 
