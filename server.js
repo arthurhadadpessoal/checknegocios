@@ -77,33 +77,32 @@ app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '20mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── Badge compacto CN (para posicionamento dinâmico em cantos) ───────────────
-// Retorna SVG de um badge retangular com logo CN, dimensões fixas em px
-function buildLogoBadge(w, h) {
-  const pad = Math.round(w * 0.06);
-  const iconSize = Math.round(h * 0.55);
-  const iconX = pad;
+// ─── Logo CN transparente (sem caixa) — para sobreposição direta na imagem ────
+// w = largura desejada em px. Altura é proporcional (~1:2.8).
+function buildLogoPng(w) {
+  const h = Math.round(w / 2.8);
+  const iconSize = Math.round(h * 0.75);
+  const iconX = 0;
   const iconY = Math.round((h - iconSize) / 2);
-  const textX = iconX + iconSize + Math.round(pad * 0.8);
-  const fs1 = Math.round(h * 0.30);
-  const fs2 = Math.round(h * 0.18);
-  const textY1 = Math.round(h * 0.48);
-  const textY2 = Math.round(h * 0.72);
-  const r = Math.round(h * 0.18); // border-radius do fundo
+  const gap = Math.round(w * 0.04);
+  const textX = iconSize + gap;
+  const fs1 = Math.round(h * 0.42);
+  const fs2 = Math.round(h * 0.24);
+  const textY1 = Math.round(h * 0.50);
+  const textY2 = Math.round(h * 0.80);
 
+  // Fundo semi-transparente apenas sob o texto para legibilidade em qualquer bg
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" x2="${iconSize}">
+    <linearGradient id="cg" x1="${iconX}" y1="0" x2="${iconSize}" y2="0" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#7dde4a"/><stop offset="100%" stop-color="#2a9e30"/>
     </linearGradient>
   </defs>
-  <!-- Fundo escuro com bordas arredondadas e leve transparência -->
-  <rect width="${w}" height="${h}" rx="${r}" ry="${r}" fill="#0f120f" opacity="0.88"/>
-  <!-- Borda verde sutil -->
-  <rect width="${w}" height="${h}" rx="${r}" ry="${r}" fill="none" stroke="#4ccc3c" stroke-width="1.5" opacity="0.5"/>
+  <!-- Sombra suave atrás do logo inteiro para funcionar em fundos claros ou escuros -->
+  <rect x="0" y="0" width="${w}" height="${h}" rx="${Math.round(h * 0.12)}" fill="black" opacity="0.35"/>
   <!-- Ícone M + checkmark -->
-  <g transform="translate(${iconX}, ${iconY}) scale(${iconSize / 70})">
-    <polygon points="4,60 18,10 34,36 50,10 64,60 56,60 50,30 34,56 18,30 12,60" fill="white" opacity="0.92"/>
+  <g transform="translate(${iconX + Math.round(h * 0.08)}, ${iconY}) scale(${iconSize / 70})">
+    <polygon points="4,60 18,10 34,36 50,10 64,60 56,60 50,30 34,56 18,30 12,60" fill="white"/>
     <polyline points="16,32 27,46 54,14" fill="none" stroke="url(#cg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <!-- check -->
@@ -113,30 +112,36 @@ function buildLogoBadge(w, h) {
 </svg>`;
 }
 
-// ─── GPT-4o Vision: analisa a imagem e escolhe o melhor canto para o badge ───
-async function chooseBadgePosition(base64, mimeType) {
+// ─── GPT-4o Vision: encontra região com espaço vazio/escuro para o logo ───────
+async function findLogoPlacement(base64, mimeType, imgW, imgH) {
   const resp = await openai.chat.completions.create({
     model: 'gpt-4o',
-    max_tokens: 100,
+    max_tokens: 200,
     messages: [{
       role: 'user',
       content: [
         {
           type: 'text',
-          text: `Analyze this marketing image. I need to place a small rectangular logo badge (dark background, ~20% of image width) in one of the four corners.
-Choose the corner that:
-1. Has the least important visual content (avoid text, faces, key graphics)
-2. Has a simpler or more uniform background (easier to read the badge against)
-3. Does NOT overlap critical information
+          text: `This is a marketing image (${imgW}x${imgH}px). I need to place a "CheckNegócios" brand logo overlay on it.
 
-Reply with ONLY valid JSON, nothing else:
-{"position": "bottom_right", "reason": "one short sentence"}
+The logo is a horizontal rectangle (roughly 28% of image width, 10% of image height).
 
-Position must be exactly one of: top_left, top_right, bottom_left, bottom_right`,
+Your task: find the best region to place it where:
+1. There is NO text, NO face, NO important graphic element
+2. The background is relatively dark, uniform, or has low visual complexity
+3. The logo won't cover any critical content
+
+Look carefully at the ENTIRE image — the empty space could be anywhere (a corner, an edge strip, a gap between elements).
+
+Reply with ONLY valid JSON — no markdown, no explanation outside the JSON:
+{"x_pct": 5, "y_pct": 85, "reason": "dark empty strip at bottom-left below the main text"}
+
+- x_pct: left edge of logo placement, as % of image width (0–72)
+- y_pct: top edge of logo placement, as % of image height (0–90)`,
         },
         {
           type: 'image_url',
-          image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${base64}`, detail: 'low' },
+          image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${base64}`, detail: 'high' },
         },
       ],
     }],
@@ -145,11 +150,13 @@ Position must be exactly one of: top_left, top_right, bottom_left, bottom_right`
   try {
     const text = resp.choices[0].message.content.trim();
     const json = JSON.parse(text.replace(/```json|```/g, '').trim());
-    console.log(`[Overlay] IA escolheu: ${json.position} — ${json.reason}`);
-    return json.position;
-  } catch {
-    console.warn('[Overlay] Falha ao parsear posição da IA, usando bottom_right');
-    return 'bottom_right';
+    const x = Math.min(Math.max(json.x_pct, 0), 72);
+    const y = Math.min(Math.max(json.y_pct, 0), 90);
+    console.log(`[Overlay] IA posicionou em x=${x}% y=${y}% — ${json.reason}`);
+    return { x_pct: x, y_pct: y };
+  } catch (e) {
+    console.warn('[Overlay] Falha ao parsear posição:', e.message, '— usando bottom-left padrão');
+    return { x_pct: 4, y_pct: 85 };
   }
 }
 
@@ -579,40 +586,33 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    // IA analisa a imagem e escolhe o melhor canto para o badge
+    // IA analisa a imagem e encontra a região com espaço vazio para o logo
     const mimeType = req.body.mimeType || 'image/jpeg';
-    const position = await chooseBadgePosition(image, mimeType);
+    const { x_pct, y_pct } = await findLogoPlacement(image, mimeType, width, height);
 
-    // Dimensões do badge (~22% da largura, proporção ~3:1)
-    const badgeW = Math.round(width * 0.22);
-    const badgeH = Math.round(badgeW / 3.2);
-    const margin = Math.round(width * 0.025);
+    // Dimensões do logo (~28% da largura da imagem)
+    const logoW = Math.round(width * 0.28);
+    const logoH = Math.round(logoW / 2.8);
 
-    // Gera o badge como PNG
-    let badgeBuf;
+    // Converte % em pixels
+    const left = Math.round((x_pct / 100) * width);
+    const top  = Math.round((y_pct / 100) * height);
+
+    // Gera o logo como PNG com fundo semi-transparente
+    let logoBuf;
     try {
-      const badgeSvg = buildLogoBadge(badgeW, badgeH);
-      badgeBuf = await sharp(Buffer.from(badgeSvg)).png().toBuffer();
+      const logoSvg = buildLogoPng(logoW);
+      logoBuf = await sharp(Buffer.from(logoSvg)).png().toBuffer();
     } catch (svgErr) {
-      console.warn('[Overlay] SVG badge falhou:', svgErr.message);
-      // Fallback: retângulo escuro simples
-      badgeBuf = await sharp({
-        create: { width: badgeW, height: badgeH, channels: 4, background: { r: 15, g: 18, b: 15, alpha: 220 } }
+      console.warn('[Overlay] SVG logo falhou:', svgErr.message);
+      logoBuf = await sharp({
+        create: { width: logoW, height: logoH, channels: 4, background: { r: 15, g: 18, b: 15, alpha: 200 } }
       }).png().toBuffer();
     }
 
-    // Calcula top/left de acordo com o canto escolhido pela IA
-    const posMap = {
-      top_left:     { top: margin,                    left: margin },
-      top_right:    { top: margin,                    left: width - badgeW - margin },
-      bottom_left:  { top: height - badgeH - margin,  left: margin },
-      bottom_right: { top: height - badgeH - margin,  left: width - badgeW - margin },
-    };
-    const { top, left } = posMap[position] || posMap['bottom_right'];
-
-    // Compõe o badge sobre a imagem original (sem estender canvas)
+    // Compõe o logo sobre a imagem original sem alterar o canvas
     const result = await sharp(inputBuf)
-      .composite([{ input: badgeBuf, top, left, blend: 'over' }])
+      .composite([{ input: logoBuf, top, left, blend: 'over' }])
       .png()
       .toBuffer();
 
