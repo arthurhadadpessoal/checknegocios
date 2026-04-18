@@ -77,49 +77,80 @@ app.use(express.text({ type: ['text/plain', 'text/*', '*/*'], limit: '20mb' }));
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ─── SVG do rodapé CN para overlay ───────────────────────────────────────────
-function buildFooterSvg(width) {
-  const h = Math.max(90, Math.round(width * 0.085));
-  const scale = h / 110;
-  const iconW = Math.round(75 * scale);
-  const iconH = Math.round(65 * scale);
-  const iconY = Math.round((h - iconH) / 2);
-  const textX = iconW + Math.round(14 * scale);
-  const fontSize1 = Math.round(22 * scale);
-  const fontSize2 = Math.round(13 * scale);
-  const urlFontSize = Math.round(11 * scale);
-  const textY1 = Math.round(h / 2 - 2);
-  const textY2 = Math.round(h / 2 + fontSize2 + 2);
+// ─── Badge compacto CN (para posicionamento dinâmico em cantos) ───────────────
+// Retorna SVG de um badge retangular com logo CN, dimensões fixas em px
+function buildLogoBadge(w, h) {
+  const pad = Math.round(w * 0.06);
+  const iconSize = Math.round(h * 0.55);
+  const iconX = pad;
+  const iconY = Math.round((h - iconSize) / 2);
+  const textX = iconX + iconSize + Math.round(pad * 0.8);
+  const fs1 = Math.round(h * 0.30);
+  const fs2 = Math.round(h * 0.18);
+  const textY1 = Math.round(h * 0.48);
+  const textY2 = Math.round(h * 0.72);
+  const r = Math.round(h * 0.18); // border-radius do fundo
 
-  return `<svg width="${width}" height="${h}" viewBox="0 0 ${width} ${h}" xmlns="http://www.w3.org/2000/svg">
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="iconGrad" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#7dde4a"/>
-      <stop offset="100%" stop-color="#2a9e30"/>
-    </linearGradient>
-    <linearGradient id="sideBar" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-      <stop offset="0%" stop-color="#4ccc3c"/>
-      <stop offset="100%" stop-color="#1a8c28" stop-opacity="0"/>
+    <linearGradient id="cg" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse" x2="${iconSize}">
+      <stop offset="0%" stop-color="#7dde4a"/><stop offset="100%" stop-color="#2a9e30"/>
     </linearGradient>
   </defs>
-  <!-- Fundo escuro -->
-  <rect width="${width}" height="${h}" fill="#111411"/>
-  <!-- Linha separadora no topo -->
-  <rect width="${width}" height="1" fill="#3dbe4a" opacity="0.25"/>
-  <!-- Barra lateral esquerda -->
-  <rect width="4" height="${h}" fill="url(#sideBar)"/>
+  <!-- Fundo escuro com bordas arredondadas e leve transparência -->
+  <rect width="${w}" height="${h}" rx="${r}" ry="${r}" fill="#0f120f" opacity="0.88"/>
+  <!-- Borda verde sutil -->
+  <rect width="${w}" height="${h}" rx="${r}" ry="${r}" fill="none" stroke="#4ccc3c" stroke-width="1.5" opacity="0.5"/>
   <!-- Ícone M + checkmark -->
-  <g transform="translate(${Math.round(16 * scale)}, ${iconY}) scale(${scale * 0.88})">
-    <polygon points="4,60 18,10 34,36 50,10 64,60 56,60 50,30 34,56 18,30 12,60" fill="white" opacity="0.95"/>
-    <polyline points="16,32 27,46 54,14" fill="none" stroke="url(#iconGrad)" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(${iconX}, ${iconY}) scale(${iconSize / 70})">
+    <polygon points="4,60 18,10 34,36 50,10 64,60 56,60 50,30 34,56 18,30 12,60" fill="white" opacity="0.92"/>
+    <polyline points="16,32 27,46 54,14" fill="none" stroke="url(#cg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <!-- Texto: check -->
-  <text x="${textX}" y="${textY1}" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="${fontSize1}" fill="white" opacity="0.95">check</text>
-  <!-- Texto: negócios -->
-  <text x="${textX}" y="${textY2}" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize2}" fill="#4ccc3c" letter-spacing="1">negócios</text>
-  <!-- URL à direita -->
-  <text x="${width - Math.round(18 * scale)}" y="${Math.round(h / 2 + urlFontSize / 3)}" font-family="Arial,Helvetica,sans-serif" font-size="${urlFontSize}" fill="rgba(255,255,255,0.25)" text-anchor="end" letter-spacing="2">checknegocios.com.br</text>
+  <!-- check -->
+  <text x="${textX}" y="${textY1}" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="${fs1}" fill="white">check</text>
+  <!-- negócios -->
+  <text x="${textX}" y="${textY2}" font-family="Arial,Helvetica,sans-serif" font-size="${fs2}" fill="#4ccc3c" letter-spacing="1">negócios</text>
 </svg>`;
+}
+
+// ─── GPT-4o Vision: analisa a imagem e escolhe o melhor canto para o badge ───
+async function chooseBadgePosition(base64, mimeType) {
+  const resp = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 100,
+    messages: [{
+      role: 'user',
+      content: [
+        {
+          type: 'text',
+          text: `Analyze this marketing image. I need to place a small rectangular logo badge (dark background, ~20% of image width) in one of the four corners.
+Choose the corner that:
+1. Has the least important visual content (avoid text, faces, key graphics)
+2. Has a simpler or more uniform background (easier to read the badge against)
+3. Does NOT overlap critical information
+
+Reply with ONLY valid JSON, nothing else:
+{"position": "bottom_right", "reason": "one short sentence"}
+
+Position must be exactly one of: top_left, top_right, bottom_left, bottom_right`,
+        },
+        {
+          type: 'image_url',
+          image_url: { url: `data:${mimeType || 'image/jpeg'};base64,${base64}`, detail: 'low' },
+        },
+      ],
+    }],
+  });
+
+  try {
+    const text = resp.choices[0].message.content.trim();
+    const json = JSON.parse(text.replace(/```json|```/g, '').trim());
+    console.log(`[Overlay] IA escolheu: ${json.position} — ${json.reason}`);
+    return json.position;
+  } catch {
+    console.warn('[Overlay] Falha ao parsear posição da IA, usando bottom_right');
+    return 'bottom_right';
+  }
 }
 
 // ─── HTML da interface web ────────────────────────────────────────────────────
@@ -548,28 +579,40 @@ app.post('/overlay', async (req, res) => {
     const { width, height } = meta;
     console.log(`[Overlay] ${width}x${height}px, format=${meta.format}`);
 
-    const footerH = Math.max(90, Math.round(width * 0.085));
+    // IA analisa a imagem e escolhe o melhor canto para o badge
+    const mimeType = req.body.mimeType || 'image/jpeg';
+    const position = await chooseBadgePosition(image, mimeType);
 
-    // Gera o rodapé como PNG (tenta SVG, fallback para faixa sólida)
-    let footerBuf;
+    // Dimensões do badge (~22% da largura, proporção ~3:1)
+    const badgeW = Math.round(width * 0.22);
+    const badgeH = Math.round(badgeW / 3.2);
+    const margin = Math.round(width * 0.025);
+
+    // Gera o badge como PNG
+    let badgeBuf;
     try {
-      const footerSvg = buildFooterSvg(width);
-      footerBuf = await sharp(Buffer.from(footerSvg))
-        .resize({ width, height: footerH, fit: 'fill' })
-        .png()
-        .toBuffer();
-      console.log('[Overlay] SVG rodapé renderizado com sucesso');
+      const badgeSvg = buildLogoBadge(badgeW, badgeH);
+      badgeBuf = await sharp(Buffer.from(badgeSvg)).png().toBuffer();
     } catch (svgErr) {
-      console.warn('[Overlay] SVG falhou, usando fallback sólido:', svgErr.message);
-      footerBuf = await sharp({
-        create: { width, height: footerH, channels: 3, background: { r: 17, g: 20, b: 17 } }
+      console.warn('[Overlay] SVG badge falhou:', svgErr.message);
+      // Fallback: retângulo escuro simples
+      badgeBuf = await sharp({
+        create: { width: badgeW, height: badgeH, channels: 4, background: { r: 15, g: 18, b: 15, alpha: 220 } }
       }).png().toBuffer();
     }
 
-    // Estende a canvas abaixo e cola o rodapé na posição correta (top = altura original)
+    // Calcula top/left de acordo com o canto escolhido pela IA
+    const posMap = {
+      top_left:     { top: margin,                    left: margin },
+      top_right:    { top: margin,                    left: width - badgeW - margin },
+      bottom_left:  { top: height - badgeH - margin,  left: margin },
+      bottom_right: { top: height - badgeH - margin,  left: width - badgeW - margin },
+    };
+    const { top, left } = posMap[position] || posMap['bottom_right'];
+
+    // Compõe o badge sobre a imagem original (sem estender canvas)
     const result = await sharp(inputBuf)
-      .extend({ bottom: footerH, background: { r: 17, g: 20, b: 17 } })
-      .composite([{ input: footerBuf, top: height, left: 0 }])
+      .composite([{ input: badgeBuf, top, left, blend: 'over' }])
       .png()
       .toBuffer();
 
