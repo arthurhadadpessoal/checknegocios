@@ -105,22 +105,23 @@ async function findLogoPlacement(base64, mimeType, imgW, imgH) {
           type: 'text',
           text: `This is a marketing image (${imgW}x${imgH}px). I need to add a "CheckNegócios" brand logo to it.
 
-The logo is horizontal (roughly 30% of image width, ~10% of image height).
+The logo rectangle is: ${Math.round(imgW * 0.30)}px wide × ${Math.round(imgW * 0.30 / 2.8)}px tall.
 
-Analyze the image carefully and choose ONE of two strategies:
+DEFAULT STRATEGY IS "footer" — only override to "place" if ALL conditions below are met:
+1. There is a region with ZERO text, ZERO faces, ZERO important graphic elements
+2. The region is clearly larger than the logo dimensions above
+3. You are 100% confident the logo will NOT touch any text or meaningful content
 
-STRATEGY A — "place": There is a visible region (no text, no face, no important graphic) large enough for the logo. It can be any solid or uniform color — dark, blue, white, gradient — as long as it is visually clean and the logo will be readable there. Return the top-left corner of that region as percentages.
+If there is any doubt → use "footer".
 
-STRATEGY B — "footer": The image is genuinely packed with content everywhere — every region has text, faces, or important graphics that the logo would cover. Only use this if there is truly no clean space anywhere.
+STRATEGY A — "place": place the logo at exact pixel coordinates within the image.
+STRATEGY B — "footer": we will add a dark strip below the image (safe, never covers content).
 
 Reply with ONLY valid JSON, no markdown:
+If A: {"strategy": "place", "x_pct": 5, "y_pct": 85, "reason": "..."}
+If B: {"strategy": "footer", "reason": "..."}
 
-If strategy A: {"strategy": "place", "x_pct": 5, "y_pct": 85, "reason": "..."}
-If strategy B: {"strategy": "footer", "reason": "..."}
-
-- x_pct: 0–70 (left edge of logo as % of image width)
-- y_pct: 0–88 (top edge of logo as % of image height)
-- Choose "footer" when there is genuinely no clean space available in the image`,
+x_pct: 0–70, y_pct: 0–88`,
         },
         {
           type: 'image_url',
